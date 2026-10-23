@@ -1,0 +1,66 @@
+merge excel
+
+function exportMergedFile() {
+  if (mergedData.length === 0) {
+    addLog('Chưa có dữ liệu để xuất file!', 'error');
+    alert('Chưa có dữ liệu để xuất file!');
+    return;
+  }
+
+  try {
+    addLog('Đang khởi tạo file Excel...', 'info');
+    
+    // Tự động định dạng cột
+    const selectedCols = Array.from(document.querySelectorAll('.col-checkbox:checked')).map(cb => ({
+      key: cb.dataset.col,
+      label: document.getElementById(`ren_${cb.dataset.col}`)?.value.trim() || cb.dataset.col
+    }));
+
+    // Ánh xạ dữ liệu theo cột đã chọn
+    const finalData = mergedData.map(row => {
+      const obj = {};
+      selectedCols.forEach(c => {
+        obj[c.label] = row[c.key] !== undefined ? row[c.key] : '';
+      });
+      return obj;
+    });
+
+    // Tạo Workbook & Worksheet
+    const ws = XLSX.utils.json_to_sheet(finalData);
+    
+    // Auto-fit chiều rộng cột
+    const colWidths = selectedCols.map(c => {
+      let maxLen = c.label.toString().length;
+      finalData.slice(0, 100).forEach(r => {
+        const val = r[c.label] ? r[c.label].toString() : '';
+        if (val.length > maxLen) maxLen = val.length;
+      });
+      return { wch: Math.min(Math.max(maxLen + 3, 10), 50) };
+    });
+    ws['!cols'] = colWidths;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Data_Merged");
+
+    // Xuất binary buffer & tải file bằng Blob URL
+    const filename = (document.getElementById('outFileName').value.trim() || 'Merged_Data') + '.xlsx';
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/octet-stream' });
+    
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    }, 100);
+
+    addLog(`Đã xuất thành công file: ${filename}`, 'success');
+  } catch (err) {
+    addLog(`Lỗi xuất file: ${err.message}`, 'error');
+    console.error(err);
+  }
+}
