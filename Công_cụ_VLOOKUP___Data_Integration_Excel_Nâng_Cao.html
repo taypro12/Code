@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Excel VLOOKUP & Data Integration Tool</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS for Excel Processing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js for Dashboard Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4', 100: '#dcfce7', 500: '#22c55e', 600: '#16a34a', 700: '#15803d', 800: '#166534'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); }
+        .tab-active { border-bottom: 2px solid #16a34a; color: #16a34a; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-sans antialiased">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-emerald-500 text-slate-900 rounded-xl font-black shadow-lg shadow-emerald-500/20">
+                    <i data-lucide="layers" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-wide text-white">VLOOKUP Master Pro</h1>
+                    <p class="text-[11px] text-emerald-400 font-medium">Enterprise Data Matching & Aggregation Suite</p>
+                </div>
+            </div>
+
+            <!-- Quick Preset & Mode Actions -->
+            <div class="flex items-center space-x-3">
+                <button id="btnExportPreset" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all">
+                    <i data-lucide="download-cloud" class="w-3.5 h-3.5 text-emerald-400"></i> Xuất Preset
+                </button>
+                <label id="btnImportPreset" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer">
+                    <i data-lucide="upload-cloud" class="w-3.5 h-3.5 text-blue-400"></i> Nạp Preset
+                    <input type="file" id="inputPresetFile" accept=".json" class="hidden">
+                </label>
+                <span class="h-4 w-px bg-slate-700 mx-1"></span>
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span class="w-1.5 h-1.5 mr-1.5 bg-emerald-400 rounded-full animate-ping"></span> Async Worker Ready
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+        <!-- Wizard Navigation Tabs -->
+        <nav class="flex border-b border-slate-200 bg-white rounded-xl shadow-sm px-4 pt-2 gap-8 text-sm font-medium text-slate-500">
+            <button id="tabBtn1" onclick="switchTab(1)" class="tab-active py-3 px-1 flex items-center gap-2">
+                <i data-lucide="folder-up" class="w-4 h-4"></i> 1. Nạp File Excel
+            </button>
+            <button id="tabBtn2" onclick="switchTab(2)" class="py-3 px-1 flex items-center gap-2">
+                <i data-lucide="sliders" class="w-4 h-4"></i> 2. Cấu Hình VLOOKUP
+            </button>
+            <button id="tabBtn3" onclick="switchTab(3)" class="py-3 px-1 flex items-center gap-2">
+                <i data-lucide="bar-chart-3" class="w-4 h-4"></i> 3. Báo Cáo & Tải Kết Quả
+            </button>
+        </nav>
+
+        <!-- STEP 1: FILE UPLOAD SECTION -->
+        <div id="stepSection1" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- Master File Dropzone -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">File Gốc (Master File)</span>
+                            <span id="badgeMain" class="text-xs text-slate-400">Chưa nạp file</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-4">File chứa dữ liệu chính cần bổ sung/ghép thông tin vào.</p>
+                        
+                        <div id="dropzoneMain" class="border-2 border-dashed border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/40 transition-all rounded-xl p-8 text-center cursor-pointer relative bg-slate-50/50">
+                            <input type="file" id="inputMainFile" accept=".xlsx, .xls, .csv" class="absolute inset-0 opacity-0 cursor-pointer">
+                            <div class="p-3 bg-white w-12 h-12 rounded-full shadow-sm mx-auto mb-3 text-emerald-600 flex items-center justify-center">
+                                <i data-lucide="database" class="w-6 h-6"></i>
+                            </div>
+                            <p class="text-sm font-semibold text-slate-700">Kéo thả File Gốc vào đây</p>
+                            <p class="text-xs text-slate-400 mt-1">Hỗ trợ .XLSX, .XLS, .CSV</p>
+                        </div>
+                    </div>
+                    <div id="mainFileInfo" class="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200 hidden flex items-center justify-between text-xs">
+                        <div class="flex items-center space-x-2 truncate">
+                            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600 flex-shrink-0"></i>
+                            <span id="mainFileName" class="font-medium text-slate-700 truncate"></span>
+                        </div>
+                        <span id="mainFileRows" class="text-slate-400 font-mono">0 dòng</span>
+                    </div>
+                </div>
+
+                <!-- Lookup Files Dropzone -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">File Tra Cứu (Lookup Files)</span>
+                            <span id="badgeLookup" class="text-xs text-slate-400">0 File đã chọn</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-4">Nạp một hoặc nhiều file chứa dữ liệu để tra cứu lấy giá trị.</p>
+                        
+                        <div id="dropzoneLookup" class="border-2 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/40 transition-all rounded-xl p-8 text-center cursor-pointer relative bg-slate-50/50">
+                            <input type="file" id="inputLookupFiles" multiple accept=".xlsx, .xls, .csv" class="absolute inset-0 opacity-0 cursor-pointer">
+                            <div class="p-3 bg-white w-12 h-12 rounded-full shadow-sm mx-auto mb-3 text-blue-600 flex items-center justify-center">
+                                <i data-lucide="files" class="w-6 h-6"></i>
+                            </div>
+                            <p class="text-sm font-semibold text-slate-700">Kéo thả nhiều File Tra Cứu vào đây</p>
+                            <p class="text-xs text-slate-400 mt-1">Giữ Ctrl/Cmd để chọn nhiều file</p>
+                        </div>
+                    </div>
+                    <div id="lookupFileList" class="mt-4 space-y-1.5 max-h-36 overflow-y-auto pr-1"></div>
+                </div>
+
+            </div>
+
+            <!-- Footer Next Step Action -->
+            <div class="flex justify-end pt-4">
+                <button onclick="switchTab(2)" class="bg-slate-900 hover:bg-slate-800 text-white font-medium px-6 py-2.5 rounded-xl text-sm shadow-md flex items-center gap-2 transition-all">
+                    Tiếp Tục Cấu Hình <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- STEP 2: CONFIGURATION SECTION -->
+        <div id="stepSection2" class="space-y-6 hidden">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Left Column: Source Selection & Data Normalization -->
+                <div class="space-y-6">
+                    
+                    <!-- Master Source Selection -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                            <i data-lucide="database" class="w-4 h-4 text-emerald-600"></i> Thiết Lập File Gốc
+                        </h3>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Chọn Sheet Gốc</label>
+                            <select id="selectMainSheet" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <option value="">-- Chưa nạp File Gốc --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">Chọn Cột Khóa Tra Cứu (Multi-Key Support)</label>
+                            <div id="mainKeysContainer" class="bg-slate-50 border border-slate-200 rounded-lg p-2 max-h-36 overflow-y-auto space-y-1">
+                                <span class="text-xs text-slate-400 italic">Chọn Sheet để tải cột...</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400 mt-1">Tích chọn 1 hoặc nhiều cột để ghép thành Khóa Tra Cứu duy nhất (Multi-Key).</p>
+                        </div>
+                    </div>
+
+                    <!-- Data Normalization & Cleaning Options -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                            <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i> Chuẩn Hóa Dữ Liệu Tra Cứu
+                        </h3>
+                        <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                            <input type="checkbox" id="chkAutoTrim" checked class="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4">
+                            <span>Auto-trim khoảng trắng thừa</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                            <input type="checkbox" id="chkIgnoreCase" checked class="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4">
+                            <span>Không phân biệt chữ hoa / thường</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                            <input type="checkbox" id="chkRemoveAccents" class="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4">
+                            <span>Bỏ dấu Tiếng Việt trước khi so sánh</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                            <input type="checkbox" id="chkRemoveSpecialChars" class="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4">
+                            <span>Xóa ký tự đặc biệt (chỉ giữ chữ & số)</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                            <input type="checkbox" id="chkPadPhoneZero" class="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4">
+                            <span>Thêm số '0' ở đầu (Mã/Số điện thoại)</span>
+                        </label>
+                    </div>
+
+                </div>
+
+                <!-- Middle Column: Rules Container -->
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <i data-lucide="git-merge" class="w-4 h-4 text-blue-600"></i> Quy Tắc Tra Cứu & Gộp Dữ Liệu
+                        </h3>
+                        <button id="btnAddRule" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all">
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Thêm Cột VLOOKUP
+                        </button>
+                    </div>
+
+                    <!-- Dynamic Rules Cards Container -->
+                    <div id="rulesContainer" class="space-y-4 max-h-[580px] overflow-y-auto pr-1">
+                        <!-- Rule Cards Injection -->
+                    </div>
+
+                    <!-- Process Execution Panel -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div class="w-full md:w-auto">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Khi không tìm thấy (N/A Value):</label>
+                            <div class="flex items-center gap-2">
+                                <select id="selectNaMode" class="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                    <option value="#N/A">#N/A</option>
+                                    <option value="BLANK">Để trống</option>
+                                    <option value="CUSTOM">Giá trị tùy chỉnh...</option>
+                                </select>
+                                <input type="text" id="inputCustomNa" placeholder="Nhập text..." class="hidden bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none w-32">
+                            </div>
+                        </div>
+
+                        <button id="btnRunVlookup" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3 rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all">
+                            <i data-lucide="play" class="w-4 h-4 fill-current"></i> THỰC THI VLOOKUP
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- STEP 3: DASHBOARD & EXPORT SECTION -->
+        <div id="stepSection3" class="space-y-6 hidden">
+            
+            <!-- Process Progress Bar Overlay -->
+            <div id="progressContainer" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3 hidden">
+                <div class="flex justify-between items-center text-xs font-bold text-slate-700">
+                    <span id="progressText">Đang xử lý VLOOKUP...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                    <div id="progressBar" class="bg-emerald-500 h-3 rounded-full transition-all duration-200 w-0"></div>
+                </div>
+            </div>
+
+            <!-- Analytics Dashboard Banner -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-400">Tổng Số Dòng</p>
+                        <p id="statTotalRows" class="text-2xl font-bold text-slate-800 mt-1">0</p>
+                    </div>
+                    <div class="p-3 bg-slate-100 text-slate-600 rounded-xl"><i data-lucide="rows" class="w-6 h-6"></i></div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-400">Khớp Thành Công (Match)</p>
+                        <p id="statMatchedRows" class="text-2xl font-bold text-emerald-600 mt-1">0</p>
+                    </div>
+                    <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i data-lucide="check-circle-2" class="w-6 h-6"></i></div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-400">Không Khớp (#N/A)</p>
+                        <p id="statUnmatchedRows" class="text-2xl font-bold text-rose-500 mt-1">0</p>
+                    </div>
+                    <div class="p-3 bg-rose-50 text-rose-500 rounded-xl"><i data-lucide="alert-triangle" class="w-6 h-6"></i></div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-400">Tỷ Lệ Khớp (Match Rate)</p>
+                        <p id="statMatchRate" class="text-2xl font-bold text-blue-600 mt-1">0%</p>
+                    </div>
+                    <div class="p-3 bg-blue-50 text-blue-600 rounded-xl"><i data-lucide="percent" class="w-6 h-6"></i></div>
+                </div>
+            </div>
+
+            <!-- Export Actions Bar -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                        <input type="checkbox" id="chkConditionalFormatting" checked class="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4">
+                        <span>Tô màu dữ liệu xuất (Highlight Match/Unmatch)</span>
+                    </label>
+                </div>
+
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <button id="btnExportFull" class="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-2.5 rounded-xl shadow-md text-xs flex items-center justify-center gap-2 transition-all">
+                        <i data-lucide="download" class="w-4 h-4"></i> Tải Bảng Kết Quả Đầy Đủ (.XLSX)
+                    </button>
+                    <button id="btnExportUnmatched" class="flex-1 sm:flex-initial bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 transition-all">
+                        <i data-lucide="file-warning" class="w-4 h-4"></i> Xuất File Lỗi (#N/A)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Data Table Preview -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden space-y-3 p-4">
+                <div class="flex items-center justify-between px-2">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Xem Trước Kết Quả (Tối đa 50 dòng)</h4>
+                    <span class="text-[11px] text-slate-400">Các cột VLOOKUP mới được highlight xanh nhạt</span>
+                </div>
+
+                <div class="overflow-x-auto max-h-[420px] rounded-xl border border-slate-200">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead id="previewThead" class="bg-slate-100 text-slate-700 font-bold sticky top-0 border-b border-slate-200"></thead>
+                        <tbody id="previewTbody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Global Application State & JavaScript Execution Engine -->
+    <script>
+        // Global Application State Object
+        const state = {
+            mainFile: null,      // { name, workbook, sheetName, rows }
+            lookupFiles: [],     // Array of { id, name, workbook, sheets: { sheetName: rows } }
+            rules: [],           // Array of VLOOKUP Rule objects
+            resultRows: [],      // Processed JSON Output
+            stats: { total: 0, matched: 0, unmatched: 0 }
+        };
+
+        // Initialize Lucide Icons on load
+        document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
+
+        // Tab Navigation Switcher
+        function switchTab(tabNum) {
+            [1, 2, 3].forEach(i => {
+                document.getElementById(`stepSection${i}`).classList.add('hidden');
+                document.getElementById(`tabBtn${i}`).classList.remove('tab-active');
+            });
+            document.getElementById(`stepSection${tabNum}`).classList.remove('hidden');
+            document.getElementById(`tabBtn${tabNum}`).classList.add('tab-active');
+        }
+
+        // Helper: Levenshtein Distance for Fuzzy Matching
+        function calculateLevenshtein(a, b) {
+            const matrix = [];
+            for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(
+                            matrix[i - 1][j - 1] + 1,
+                            matrix[i][j - 1] + 1,
+                            matrix[i - 1][j] + 1
+                        );
+                    }
+                }
+            }
+            return matrix[b.length][a.length];
+        }
+
+        function calculateSimilarityRatio(s1, s2) {
+            if (!s1 || !s2) return 0;
+            const distance = calculateLevenshtein(s1, s2);
+            const maxLength = Math.max(s1.length, s2.length);
+            return maxLength === 0 ? 1.0 : (1.0 - distance / maxLength);
+        }
+
+        // Helper: Remove Vietnamese Accents
+        function removeVietnameseTones(str) {
+            if (!str) return "";
+            return str.normalize('NFD')
+                      .replace(/[\u0300-\u036f]/g, '')
+                      .replace(/đ/g, 'd').replace(/Đ/g, 'D');
+        }
+
+        // Helper: Key Normalization Function
+        function normalizeKeyValue(val, opts) {
+            if (val === null || val === undefined) return "";
+            let str = String(val);
+
+            if (opts.trim) str = str.trim();
+            if (opts.ignoreCase) str = str.toLowerCase();
+            if (opts.removeAccents) str = removeVietnameseTones(str);
+            if (opts.removeSpecial) str = str.replace(/[^a-zA-Z0-9]/g, '');
+            if (opts.padPhoneZero && str.length > 0 && !str.startsWith('0') && !isNaN(str)) {
+                str = '0' + str;
+            }
+            return str;
+        }
+
+        // Drag & Drop Setup Utility
+        function setupDropzone(elementId, inputId, handleFn) {
+            const el = document.getElementById(elementId);
+            const input = document.getElementById(inputId);
+
+            ['dragenter', 'dragover'].forEach(name => {
+                el.addEventListener(name, (e) => { e.preventDefault(); el.classList.add('border-emerald-500', 'bg-emerald-50/50'); });
+            });
+            ['dragleave', 'drop'].forEach(name => {
+                el.addEventListener(name, (e) => { e.preventDefault(); el.classList.remove('border-emerald-500', 'bg-emerald-50/50'); });
+            });
+            el.addEventListener('drop', (e) => {
+                if (e.dataTransfer.files.length) handleFn(e.dataTransfer.files);
+            });
+            input.addEventListener('change', (e) => {
+                if (e.target.files.length) handleFn(e.target.files);
+            });
+        }
+
+        // File Reader Utility
+        function readExcelFileAsync(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        resolve(workbook);
+                    } catch (err) { reject(err); }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // Handle Master File Upload
+        setupDropzone('dropzoneMain', 'inputMainFile', async (files) => {
+            const file = files[0];
+            try {
+                const workbook = await readExcelFileAsync(file);
+                state.mainFile = {
+                    name: file.name,
+                    workbook: workbook,
+                    sheetName: workbook.SheetNames[0],
+                    sheets: {}
+                };
+
+                workbook.SheetNames.forEach(sName => {
+                    state.mainFile.sheets[sName] = XLSX.utils.sheet_to_json(workbook.Sheets[sName], { defval: "" });
+                });
+
+                document.getElementById('badgeMain').textContent = "Đã nạp file";
+                document.getElementById('mainFileName').textContent = file.name;
+                document.getElementById('mainFileInfo').classList.remove('hidden');
+
+                populateMainSheetDropdown();
+            } catch (err) {
+                alert("Lỗi nạp File Gốc: " + err.message);
+            }
+        });
+
+        // Handle Lookup Files Upload
+        setupDropzone('dropzoneLookup', 'inputLookupFiles', async (files) => {
+            for (let file of files) {
+                try {
+                    const workbook = await readExcelFileAsync(file);
+                    const fileObj = {
+                        id: 'lookup_' + Math.random().toString(36).substring(2, 9),
+                        name: file.name,
+                        workbook: workbook,
+                        sheets: {}
+                    };
+
+                    workbook.SheetNames.forEach(sName => {
+                        fileObj.sheets[sName] = XLSX.utils.sheet_to_json(workbook.Sheets[sName], { defval: "" });
+                    });
+
+                    state.lookupFiles.push(fileObj);
+                } catch (err) {
+                    console.error("Lỗi file tra cứu:", file.name, err);
+                }
+            }
+            renderLookupFileList();
+        });
+
+        function renderLookupFileList() {
+            const listEl = document.getElementById('lookupFileList');
+            listEl.innerHTML = '';
+            document.getElementById('badgeLookup').textContent = `${state.lookupFiles.length} File đã nạp`;
+
+            state.lookupFiles.forEach(file => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between text-xs bg-slate-100 p-2 rounded-lg border border-slate-200';
+                div.innerHTML = `
+                    <div class="flex items-center space-x-2 truncate">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5 text-blue-600 flex-shrink-0"></i>
+                        <span class="font-medium text-slate-700 truncate">${file.name}</span>
+                    </div>
+                    <button onclick="removeLookupFile('${file.id}')" class="text-slate-400 hover:text-rose-500 p-0.5"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                `;
+                listEl.appendChild(div);
+            });
+            lucide.createIcons();
+            updateAllRuleDropdowns();
+        }
+
+        function removeLookupFile(id) {
+            state.lookupFiles = state.lookupFiles.filter(f => f.id !== id);
+            renderLookupFileList();
+        }
+
+        // Master Sheet & Keys Population
+        function populateMainSheetDropdown() {
+            const select = document.getElementById('selectMainSheet');
+            select.innerHTML = '<option value="">-- Chọn Sheet --</option>';
+            
+            if (!state.mainFile) return;
+
+            Object.keys(state.mainFile.sheets).forEach(sName => {
+                const opt = document.createElement('option');
+                opt.value = sName;
+                opt.textContent = sName;
+                select.appendChild(opt);
+            });
+
+            if (select.options.length > 1) {
+                select.selectedIndex = 1;
+                renderMainKeysCheckboxes();
+            }
+        }
+
+        document.getElementById('selectMainSheet').addEventListener('change', renderMainKeysCheckboxes);
+
+        function renderMainKeysCheckboxes() {
+            const sheetName = document.getElementById('selectMainSheet').value;
+            const container = document.getElementById('mainKeysContainer');
+            container.innerHTML = '';
+
+            if (!sheetName || !state.mainFile.sheets[sheetName]) return;
+
+            const rows = state.mainFile.sheets[sheetName];
+            if (rows.length > 0) {
+                document.getElementById('mainFileRows').textContent = `${rows.length} dòng`;
+                const headers = Object.keys(rows[0]);
+                
+                headers.forEach(h => {
+                    const lbl = document.createElement('label');
+                    lbl.className = 'flex items-center gap-2 text-xs text-slate-700 hover:bg-slate-100 p-1 rounded cursor-pointer';
+                    lbl.innerHTML = `
+                        <input type="checkbox" value="${h}" class="main-key-chk rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5">
+                        <span>${h}</span>
+                    `;
+                    container.appendChild(lbl);
+                });
+            }
+        }
+
+        // Rule Dynamic Management
+        document.getElementById('btnAddRule').addEventListener('click', () => addRuleCard());
+
+        function addRuleCard() {
+            const ruleId = 'rule_' + Math.random().toString(36).substring(2, 9);
+            const rule = {
+                id: ruleId,
+                fileId: '',
+                sheetName: '',
+                lookupKeys: [],
+                valCol: '',
+                newColName: '',
+                matchType: 'EXACT', // EXACT, FUZZY, RANGE
+                fuzzyThreshold: 85,
+                dupHandling: 'FIRST' // FIRST, LAST, CONCAT, SUM, AVG, MIN, MAX, COUNT
+            };
+            state.rules.push(rule);
+
+            const card = document.createElement('div');
+            card.id = `card_${ruleId}`;
+            card.className = 'bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3 relative';
+            card.innerHTML = `
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span class="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">Cột Tra Cứu #${state.rules.length}</span>
+                    <button onclick="removeRuleCard('${ruleId}')" class="text-slate-400 hover:text-rose-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                        <label class="block font-medium text-slate-600 mb-1">File Tra Cứu</label>
+                        <select class="rule-file-select w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 focus:ring-1 focus:ring-blue-500" data-id="${ruleId}">
+                            <option value="">-- Chọn File --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-600 mb-1">Sheet Tra Cứu</label>
+                        <select class="rule-sheet-select w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 focus:ring-1 focus:ring-blue-500" data-id="${ruleId}">
+                            <option value="">-- Chọn Sheet --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                        <label class="block font-medium text-slate-600 mb-1">Cột Khóa Tra Cứu (Multi-Key)</label>
+                        <div class="rule-keys-box bg-slate-50 border border-slate-200 rounded-lg p-2 max-h-24 overflow-y-auto space-y-1" data-id="${ruleId}">
+                            <span class="text-[11px] text-slate-400 italic">Chọn Sheet trước...</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-600 mb-1">Cột Lấy Giá Trị (Value)</label>
+                        <select class="rule-val-select w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5 focus:ring-1 focus:ring-blue-500" data-id="${ruleId}">
+                            <option value="">-- Chọn Cột --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1 border-t border-slate-100">
+                    <div>
+                        <label class="block font-medium text-slate-600 mb-1">Chế Độ Match</label>
+                        <select class="rule-match-type w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5" data-id="${ruleId}">
+                            <option value="EXACT">Khớp Chính Xác (Exact)</option>
+                            <option value="FUZZY">Fuzzy (Khớp Gần Đúng)</option>
+                            <option value="RANGE">Range (Khoảng <= Value)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-600 mb-1">Xử Lý Trùng Key</label>
+                        <select class="rule-dup-handle w-full bg-slate-50 border border-slate-200 rounded-lg p-1.5" data-id="${ruleId}">
+                            <option value="FIRST">Dòng Đầu Tiên (FIRST)</option>
+                            <option value="LAST">Dòng Cuối Cùng (LAST)</option>
+                            <option value="CONCAT">Nối Chuỗi (CONCAT)</option>
+                            <option value="SUM">Tính Tổng (SUM)</option>
+                            <option value="AVG">Trung Bình (AVERAGE)</option>
+                            <option value="MIN">Nhỏ Nhất (MIN)</option>
+                            <option value="MAX">Lớn Nhất (MAX)</option>
+                            <option value="COUNT">Đếm Số Lần (COUNT)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-600 mb-1">Tên Cột Mới</label>
+                        <input type="text" class="rule-col-name w-full bg-white border border-slate-200 rounded-lg p-1.5" placeholder="Tên cột xuất file..." data-id="${ruleId}">
+                    </div>
+                </div>
+
+                <!-- Fuzzy Slider Options (Conditional) -->
+                <div class="rule-fuzzy-opts hidden bg-amber-50/60 p-2.5 rounded-lg border border-amber-200/80 text-xs flex items-center justify-between" data-id="${ruleId}">
+                    <span class="font-medium text-amber-800">Ngưỡng Tin Cậy (Confidence):</span>
+                    <div class="flex items-center gap-2">
+                        <input type="range" class="rule-fuzzy-slider accent-amber-600" min="50" max="100" value="85" data-id="${ruleId}">
+                        <span class="rule-fuzzy-val font-bold text-amber-900 w-8">85%</span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('rulesContainer').appendChild(card);
+            lucide.createIcons();
+
+            updateRuleCardDropdowns(ruleId);
+            attachRuleCardListeners(ruleId);
+        }
+
+        function removeRuleCard(id) {
+            state.rules = state.rules.filter(r => r.id !== id);
+            document.getElementById(`card_${id}`).remove();
+        }
+
+        function updateAllRuleDropdowns() {
+            state.rules.forEach(r => updateRuleCardDropdowns(r.id));
+        }
+
+        function updateRuleCardDropdowns(ruleId) {
+            const card = document.getElementById(`card_${ruleId}`);
+            if (!card) return;
+
+            const fileSelect = card.querySelector('.rule-file-select');
+            fileSelect.innerHTML = '<option value="">-- Chọn File --</option>';
+
+            state.lookupFiles.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f.id;
+                opt.textContent = f.name;
+                fileSelect.appendChild(opt);
+            });
+        }
+
+        function attachRuleCardListeners(ruleId) {
+            const card = document.getElementById(`card_${ruleId}`);
+            const fileSelect = card.querySelector('.rule-file-select');
+            const sheetSelect = card.querySelector('.rule-sheet-select');
+            const keysBox = card.querySelector('.rule-keys-box');
+            const valSelect = card.querySelector('.rule-val-select');
+            const matchTypeSelect = card.querySelector('.rule-match-type');
+            const dupHandleSelect = card.querySelector('.rule-dup-handle');
+            const colNameInput = card.querySelector('.rule-col-name');
+            const fuzzyOpts = card.querySelector('.rule-fuzzy-opts');
+            const fuzzySlider = card.querySelector('.rule-fuzzy-slider');
+            const fuzzyVal = card.querySelector('.rule-fuzzy-val');
+
+            fileSelect.addEventListener('change', (e) => {
+                const rule = state.rules.find(r => r.id === ruleId);
+                if (rule) rule.fileId = e.target.value;
+
+                sheetSelect.innerHTML = '<option value="">-- Chọn Sheet --</option>';
+                keysBox.innerHTML = '<span class="text-[11px] text-slate-400 italic">Chọn Sheet trước...</span>';
+                valSelect.innerHTML = '<option value="">-- Chọn Cột --</option>';
+
+                const fObj = state.lookupFiles.find(f => f.id === e.target.value);
+                if (fObj) {
+                    Object.keys(fObj.sheets).forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s;
+                        opt.textContent = s;
+                        sheetSelect.appendChild(opt);
+                    });
+                    if (sheetSelect.options.length > 1) {
+                        sheetSelect.selectedIndex = 1;
+                        sheetSelect.dispatchEvent(new Event('change'));
+                    }
+                }
+            });
+
+            sheetSelect.addEventListener('change', (e) => {
+                const rule = state.rules.find(r => r.id === ruleId);
+                if (rule) rule.sheetName = e.target.value;
+
+                keysBox.innerHTML = '';
+                valSelect.innerHTML = '<option value="">-- Chọn Cột --</option>';
+
+                const fObj = state.lookupFiles.find(f => f.id === rule.fileId);
+                if (fObj && fObj.sheets[e.target.value]) {
+                    const rows = fObj.sheets[e.target.value];
+                    if (rows.length > 0) {
+                        const headers = Object.keys(rows[0]);
+                        headers.forEach(h => {
+                            const lbl = document.createElement('label');
+                            lbl.className = 'flex items-center gap-2 text-xs text-slate-700 hover:bg-slate-100 p-0.5 rounded cursor-pointer';
+                            lbl.innerHTML = `<input type="checkbox" value="${h}" class="rule-key-chk rounded text-blue-600 focus:ring-blue-500 w-3 h-3"><span>${h}</span>`;
+                            keysBox.appendChild(lbl);
+
+                            const opt = document.createElement('option');
+                            opt.value = h;
+                            opt.textContent = h;
+                            valSelect.appendChild(opt);
+                        });
+
+                        keysBox.querySelectorAll('.rule-key-chk').forEach(chk => {
+                            chk.addEventListener('change', () => {
+                                rule.lookupKeys = Array.from(keysBox.querySelectorAll('.rule-key-chk:checked')).map(c => c.value);
+                            });
+                        });
+                    }
+                }
+            });
+
+            valSelect.addEventListener('change', (e) => {
+                const rule = state.rules.find(r => r.id === ruleId);
+                if (rule) {
+                    rule.valCol = e.target.value;
+                    if (!colNameInput.value) {
+                        colNameInput.value = `${e.target.value}_VLOOKUP`;
+                        rule.newColName = colNameInput.value;
+                    }
+                }
+            });
+
+            colNameInput.addEventListener('input', (e) => {
+                const rule = state.rules.find(r => r.id === ruleId);
+                if (rule) rule.newColName = e.target.value;
+            });
+
+            matchTypeSelect.addEventListener('change', (e) => {
+                const rule = state.rules.find(r => r.id === ruleId);
+                if (rule) rule.matchType = e.target.value;
+                if (e.target.value === 'FUZZY') fuzzyOpts.classList.remove('hidden');
+                else fuzzyOpts.classList.add('hidden');
+            });
+
+            dupHandleSelect.addEventListener('change', (e) => {
+                const rule = state.rules.find(r => r.id === ruleId);
+                if (rule) rule.dupHandling = e.target.value;
+            });
+
+            fuzzySlider.addEventListener('input', (e) => {
+                fuzzyVal.textContent = e.target.value + '%';
+                const rule = state.rules.find(r => r.id === ruleId);
+                if (rule) rule.fuzzyThreshold = parseInt(e.target.value);
+            });
+        }
+
+        // NA Mode Selector Listener
+        document.getElementById('selectNaMode').addEventListener('change', (e) => {
+            const input = document.getElementById('inputCustomNa');
+            if (e.target.value === 'CUSTOM') input.classList.remove('hidden');
+            else input.classList.add('hidden');
+        });
+
+        // Preset Export / Import Configuration JSON
+        document.getElementById('btnExportPreset').addEventListener('click', () => {
+            const config = {
+                normalizationOpts: {
+                    autoTrim: document.getElementById('chkAutoTrim').checked,
+                    ignoreCase: document.getElementById('chkIgnoreCase').checked,
+                    removeAccents: document.getElementById('chkRemoveAccents').checked,
+                    removeSpecialChars: document.getElementById('chkRemoveSpecialChars').checked,
+                    padPhoneZero: document.getElementById('chkPadPhoneZero').checked
+                },
+                rules: state.rules
+            };
+            const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'vlookup_preset_config.json';
+            a.click();
+        });
+
+        document.getElementById('inputPresetFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const config = JSON.parse(event.target.result);
+                    if (config.normalizationOpts) {
+                        document.getElementById('chkAutoTrim').checked = config.normalizationOpts.autoTrim;
+                        document.getElementById('chkIgnoreCase').checked = config.normalizationOpts.ignoreCase;
+                        document.getElementById('chkRemoveAccents').checked = config.normalizationOpts.removeAccents;
+                        document.getElementById('chkRemoveSpecialChars').checked = config.normalizationOpts.removeSpecialChars;
+                        document.getElementById('chkPadPhoneZero').checked = config.normalizationOpts.padPhoneZero;
+                    }
+                    alert('Nạp Cấu Hình Preset Thành Công!');
+                } catch (err) { alert('File Preset Không Hợp Lệ!'); }
+            };
+            reader.readAsText(file);
+        });
+
+        // ==========================================
+        // VLOOKUP EXECUTION ENGINE (ASYNC CHUNKED WORKER)
+        // ==========================================
+
+        document.getElementById('btnRunVlookup').addEventListener('click', async () => {
+            const mainSheet = document.getElementById('selectMainSheet').value;
+            const selectedMainKeyChks = Array.from(document.querySelectorAll('.main-key-chk:checked')).map(c => c.value);
+
+            if (!mainSheet || selectedMainKeyChks.length === 0) {
+                alert('Vui lòng chọn Sheet Gốc và ít nhất 1 Cột Khóa ở File Gốc!');
+                return;
+            }
+
+            if (state.rules.length === 0) {
+                alert('Vui lòng thêm ít nhất 1 Quy tắc VLOOKUP!');
+                return;
+            }
+
+            // Normalization options
+            const normOpts = {
+                trim: document.getElementById('chkAutoTrim').checked,
+                ignoreCase: document.getElementById('chkIgnoreCase').checked,
+                removeAccents: document.getElementById('chkRemoveAccents').checked,
+                removeSpecial: document.getElementById('chkRemoveSpecialChars').checked,
+                padPhoneZero: document.getElementById('chkPadPhoneZero').checked
+            };
+
+            // NA Value fallback
+            const naMode = document.getElementById('selectNaMode').value;
+            let naValue = "#N/A";
+            if (naMode === 'BLANK') naValue = "";
+            if (naMode === 'CUSTOM') naValue = document.getElementById('inputCustomNa').value || "#N/A";
+
+            // Switch to Step 3 & Show Progress Bar
+            switchTab(3);
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressPercent = document.getElementById('progressPercent');
+            const progressText = document.getElementById('progressText');
+            progressContainer.classList.remove('hidden');
+
+            // Build Index Maps for each Rule
+            progressText.textContent = "Đang khởi tạo chỉ mục dữ liệu tra cứu...";
+            progressBar.style.width = "10%";
+            progressPercent.textContent = "10%";
+
+            await new Promise(r => setTimeout(r, 100)); // UI yield
+
+            const ruleIndexMaps = state.rules.map(rule => {
+                const fObj = state.lookupFiles.find(f => f.id === rule.fileId);
+                const rows = fObj && fObj.sheets[rule.sheetName] ? fObj.sheets[rule.sheetName] : [];
+                
+                // Group values by lookup key
+                const map = new Map();
+                rows.forEach(r => {
+                    const rawKeys = rule.lookupKeys.map(k => r[k]);
+                    const keyStr = rawKeys.map(k => normalizeKeyValue(k, normOpts)).join('|');
+
+                    if (keyStr) {
+                        if (!map.has(keyStr)) map.set(keyStr, []);
+                        map.get(keyStr).push(r[rule.valCol]);
+                    }
+                });
+
+                return { rule, map, rows };
+            });
+
+            // Process Main Data in Asynchronous Batches
+            const mainRows = JSON.parse(JSON.stringify(state.mainFile.sheets[mainSheet]));
+            const totalRows = mainRows.length;
+            let matchedCount = 0;
+            const batchSize = 100;
+
+            for (let i = 0; i < totalRows; i += batchSize) {
+                const end = Math.min(i + batchSize, totalRows);
+                
+                for (let rIdx = i; rIdx < end; rIdx++) {
+                    const row = mainRows[rIdx];
+                    const rawMainKeys = selectedMainKeyChks.map(k => row[k]);
+                    const mainKeyStr = rawMainKeys.map(k => normalizeKeyValue(k, normOpts)).join('|');
+
+                    let rowHasMatch = false;
+
+                    ruleIndexMaps.forEach(idxObj => {
+                        const { rule, map, rows } = idxObj;
+                        const outColName = rule.newColName || `${rule.valCol}_VLOOKUP`;
+                        let valResult = null;
+
+                        if (rule.matchType === 'EXACT') {
+                            if (map.has(mainKeyStr)) {
+                                const matchedVals = map.get(mainKeyStr);
+                                valResult = aggregateValues(matchedVals, rule.dupHandling);
+                                rowHasMatch = true;
+                            }
+                        } else if (rule.matchType === 'FUZZY') {
+                            // Fuzzy search over map keys
+                            let bestRatio = 0;
+                            let bestKey = null;
+                            const targetRatio = rule.fuzzyThreshold / 100.0;
+
+                            for (let k of map.keys()) {
+                                const ratio = calculateSimilarityRatio(mainKeyStr, k);
+                                if (ratio > bestRatio && ratio >= targetRatio) {
+                                    bestRatio = ratio;
+                                    bestKey = k;
+                                }
+                            }
+                            if (bestKey) {
+                                valResult = aggregateValues(map.get(bestKey), rule.dupHandling);
+                                rowHasMatch = true;
+                            }
+                        } else if (rule.matchType === 'RANGE') {
+                            // Range <= value lookup
+                            const numVal = parseFloat(mainKeyStr);
+                            if (!isNaN(numVal)) {
+                                let matchVal = null;
+                                rows.forEach(r => {
+                                    const rKeyNum = parseFloat(normalizeKeyValue(r[rule.lookupKeys[0]], normOpts));
+                                    if (!isNaN(rKeyNum) && numVal >= rKeyNum) {
+                                        matchVal = r[rule.valCol];
+                                    }
+                                });
+                                if (matchVal !== null) {
+                                    valResult = matchVal;
+                                    rowHasMatch = true;
+                                }
+                            }
+                        }
+
+                        row[outColName] = (valResult !== null && valResult !== undefined) ? valResult : naValue;
+                    });
+
+                    if (rowHasMatch) matchedCount++;
+                }
+
+                // Update UI Progress
+                const pct = Math.round((end / totalRows) * 100);
+                progressBar.style.width = `${pct}%`;
+                progressPercent.textContent = `${pct}%`;
+                progressText.textContent = `Đang xử lý VLOOKUP dòng ${end}/${totalRows}...`;
+                await new Promise(r => setTimeout(r, 0)); // Yield to prevent browser freeze
+            }
+
+            // Processing Complete - Store State & Render Preview
+            state.resultRows = mainRows;
+            state.stats = {
+                total: totalRows,
+                matched: matchedCount,
+                unmatched: totalRows - matchedCount
+            };
+
+            updateDashboardUI();
+            renderPreviewTable(mainRows);
+            progressContainer.classList.add('hidden');
+        });
+
+        // Helper: Aggregate Duplicate Values
+        function aggregateValues(vals, mode) {
+            if (!vals || vals.length === 0) return null;
+            if (mode === 'FIRST') return vals[0];
+            if (mode === 'LAST') return vals[vals.length - 1];
+            if (mode === 'CONCAT') return vals.join(', ');
+
+            // Numeric Aggregations
+            const nums = vals.map(v => parseFloat(v)).filter(v => !isNaN(v));
+            if (nums.length === 0) return vals[0];
+
+            if (mode === 'SUM') return nums.reduce((a, b) => a + b, 0);
+            if (mode === 'AVG') return (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(2);
+            if (mode === 'MIN') return Math.min(...nums);
+            if (mode === 'MAX') return Math.max(...nums);
+            if (mode === 'COUNT') return vals.length;
+
+            return vals[0];
+        }
+
+        // Dashboard & Preview Table UI Functions
+        function updateDashboardUI() {
+            document.getElementById('statTotalRows').textContent = state.stats.total.toLocaleString();
+            document.getElementById('statMatchedRows').textContent = state.stats.matched.toLocaleString();
+            document.getElementById('statUnmatchedRows').textContent = state.stats.unmatched.toLocaleString();
+            
+            const rate = state.stats.total > 0 ? ((state.stats.matched / state.stats.total) * 100).toFixed(1) : 0;
+            document.getElementById('statMatchRate').textContent = `${rate}%`;
+        }
+
+        function renderPreviewTable(rows) {
+            const thead = document.getElementById('previewThead');
+            const tbody = document.getElementById('previewTbody');
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            if (!rows || rows.length === 0) return;
+
+            const headers = Object.keys(rows[0]);
+            const newColNames = state.rules.map(r => r.newColName || `${r.valCol}_VLOOKUP`);
+
+            // Render Header
+            const trHead = document.createElement('tr');
+            headers.forEach(h => {
+                const th = document.createElement('th');
+                th.className = 'px-4 py-3 border-b border-slate-200 whitespace-nowrap';
+                if (newColNames.includes(h)) {
+                    th.className += ' bg-emerald-50 text-emerald-800';
+                    th.innerHTML = `${h} <span class="text-[9px] bg-emerald-200 text-emerald-800 px-1 py-0.5 rounded ml-1">NEW</span>`;
+                } else {
+                    th.textContent = h;
+                }
+                trHead.appendChild(th);
+            });
+            thead.appendChild(trHead);
+
+            // Render Max 50 Rows
+            const previewRows = rows.slice(0, 50);
+            previewRows.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors';
+
+                headers.forEach(h => {
+                    const td = document.createElement('td');
+                    td.className = 'px-4 py-2 border-b border-slate-100 whitespace-nowrap text-slate-600';
+                    
+                    if (newColNames.includes(h)) {
+                        td.className += ' bg-emerald-50/40 font-medium text-slate-800';
+                    }
+
+                    td.textContent = r[h] !== undefined ? r[h] : '';
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Export Excel Functions (with SheetJS Conditional Formatting Styles)
+        document.getElementById('btnExportFull').addEventListener('click', () => {
+            if (!state.resultRows || state.resultRows.length === 0) return;
+            exportToExcelFile(state.resultRows, 'VLOOKUP_Result_Full.xlsx');
+        });
+
+        document.getElementById('btnExportUnmatched').addEventListener('click', () => {
+            if (!state.resultRows || state.resultRows.length === 0) return;
+            const naValue = document.getElementById('selectNaMode').value === 'CUSTOM' ? 
+                            document.getElementById('inputCustomNa').value : "#N/A";
+            
+            const newColNames = state.rules.map(r => r.newColName || `${r.valCol}_VLOOKUP`);
+            const unmatchedRows = state.resultRows.filter(r => newColNames.some(c => r[c] === naValue || r[c] === ""));
+
+            if (unmatchedRows.length === 0) {
+                alert('Không có dòng lỗi / #N/A nào!');
+                return;
+            }
+            exportToExcelFile(unmatchedRows, 'VLOOKUP_Result_Unmatched_Only.xlsx');
+        });
+
+        function exportToExcelFile(dataRows, fileName) {
+            const ws = XLSX.utils.json_to_sheet(dataRows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Result");
+
+            // Enable styling if option checked
+            const highlightEnabled = document.getElementById('chkConditionalFormatting').checked;
+            if (highlightEnabled && ws['!ref']) {
+                const range = XLSX.utils.decode_range(ws['!ref']);
+                const newColNames = state.rules.map(r => r.newColName || `${r.valCol}_VLOOKUP`);
+
+                for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+                    for (let C = range.s.c; C <= range.e.c; ++C) {
+                        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                        const headerAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+                        
+                        if (ws[headerAddress] && newColNames.includes(ws[headerAddress].v)) {
+                            if (ws[cellAddress]) {
+                                const val = String(ws[cellAddress].v);
+                                if (val === '#N/A' || val === '') {
+                                    ws[cellAddress].s = { fill: { fgColor: { rgb: "FFD1D1" } } }; // Light Red
+                                } else {
+                                    ws[cellAddress].s = { fill: { fgColor: { rgb: "E2F0D9" } } }; // Light Green
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            XLSX.writeFile(wb, fileName);
+        }
+
+    </script>
+</body>
+</html>
