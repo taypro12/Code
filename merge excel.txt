@@ -1,0 +1,590 @@
+merge excel
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Excel Merger Pro Offline v3.1</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SheetJS (XLSX) CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      background-color: #0b0f17;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+    .glass-card {
+      background: rgba(22, 30, 46, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(51, 65, 85, 0.8);
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(71, 85, 105, 1);
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 custom-scrollbar">
+
+  <div class="max-w-7xl mx-auto space-y-6">
+    
+    <!-- HEADER -->
+    <header class="glass-card rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 text-2xl font-bold shadow-lg shadow-emerald-500/20">
+          <i class="fa-solid fa-file-excel"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-extrabold text-white tracking-wide">Excel Merger Pro <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Offline v3.1</span></h1>
+          <p class="text-sm text-slate-400">Gộp nhiều file Excel/CSV, tùy chọn cột, tự động căn chỉnh & xuất file an toàn 100%</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button onclick="downloadSelfHtml()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-sm font-medium transition flex items-center gap-2">
+          <i class="fa-solid fa-download text-emerald-400"></i> Lưu ứng dụng về máy
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- LEFT COLUMN: FILE DROP & LIST -->
+      <div class="lg:col-span-1 space-y-6">
+        
+        <!-- DROPZONE -->
+        <div class="glass-card rounded-2xl p-6">
+          <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-cloud-arrow-up text-emerald-400"></i> Nạp File Đầu Vào
+          </h2>
+          <div id="dropZone" onclick="document.getElementById('fileInput').click()" 
+               class="border-2 border-dashed border-slate-700 hover:border-emerald-500/50 bg-slate-900/40 hover:bg-slate-900/80 rounded-xl p-8 text-center cursor-pointer transition group">
+            <input type="file" id="fileInput" multiple accept=".xlsx, .xls, .csv" class="hidden" onchange="handleFilesSelect(event)">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-slate-800 group-hover:bg-emerald-500/10 flex items-center justify-center text-slate-400 group-hover:text-emerald-400 transition">
+              <i class="fa-solid fa-folder-open text-xl"></i>
+            </div>
+            <p class="text-sm font-medium text-slate-300">Kéo & thả các file Excel / CSV vào đây</p>
+            <p class="text-xs text-slate-500 mt-1">Hỗ trợ các định dạng .xlsx, .xls, .csv</p>
+          </div>
+        </div>
+
+        <!-- FILE LIST -->
+        <div class="glass-card rounded-2xl p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+              <i class="fa-solid fa-list-check text-emerald-400"></i> Danh sách File (<span id="fileCount">0</span>)
+            </h2>
+            <button onclick="removeAllFiles()" class="text-xs font-medium text-rose-400 hover:text-rose-300 transition flex items-center gap-1">
+              <i class="fa-solid fa-trash-can"></i> Xóa tất cả
+            </button>
+          </div>
+          
+          <div id="fileList" class="space-y-2 max-h-80 overflow-y-auto custom-scrollbar pr-1">
+            <p class="text-xs text-slate-500 text-center py-6 border border-slate-800/60 rounded-xl">Chưa có file nào được nạp.</p>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between text-xs text-slate-400">
+            <span>Tổng dung lượng:</span>
+            <span id="totalSize" class="font-medium text-slate-200">0 MB</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: OPTIONS, COLUMNS & ACTIONS -->
+      <div class="lg:col-span-2 space-y-6">
+        
+        <!-- MERGE CONFIG -->
+        <div class="glass-card rounded-2xl p-6">
+          <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-emerald-400"></i> Chế độ & Cấu hình
+          </h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <label class="relative flex flex-col p-4 rounded-xl border border-slate-700/60 bg-slate-900/30 cursor-pointer hover:bg-slate-900/60 transition">
+              <div class="flex items-center gap-3 mb-2">
+                <input type="radio" name="mergeMode" value="append" checked class="w-4 h-4 text-emerald-500 bg-slate-800 border-slate-600 focus:ring-emerald-500">
+                <span class="font-semibold text-slate-200">Nối tiếp dòng (Append)</span>
+              </div>
+              <span class="text-xs text-slate-400">Gộp chung dữ liệu từ tất cả các file/sheet thành 1 Sheet duy nhất.</span>
+            </label>
+
+            <label class="relative flex flex-col p-4 rounded-xl border border-slate-700/60 bg-slate-900/30 cursor-pointer hover:bg-slate-900/60 transition">
+              <div class="flex items-center gap-3 mb-2">
+                <input type="radio" name="mergeMode" value="sheets" class="w-4 h-4 text-emerald-500 bg-slate-800 border-slate-600 focus:ring-emerald-500">
+                <span class="font-semibold text-slate-200">Gộp nhiều Sheet (Tabs)</span>
+              </div>
+              <span class="text-xs text-slate-400">Giữ nguyên dữ liệu, mỗi file/sheet sẽ chuyển thành 1 Tab riêng trong file mới.</span>
+            </label>
+          </div>
+
+          <!-- EXTRA OPTIONS -->
+          <div class="flex flex-wrap gap-4 pt-2 text-xs font-medium text-slate-300">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="addSourceFile" checked class="rounded border-slate-700 bg-slate-800 text-emerald-500 focus:ring-emerald-500">
+              Thêm cột "File Nguồn"
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="addSourceSheet" checked class="rounded border-slate-700 bg-slate-800 text-emerald-500 focus:ring-emerald-500">
+              Thêm cột "Sheet Nguồn"
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="autoFitCols" checked class="rounded border-slate-700 bg-slate-800 text-emerald-500 focus:ring-emerald-500">
+              Tự động chỉnh độ rộng cột (Auto-fit)
+            </label>
+          </div>
+        </div>
+
+        <!-- COLUMN SELECTION & MAPPING -->
+        <div class="glass-card rounded-2xl p-6">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+              <i class="fa-solid fa-table-columns text-emerald-400"></i> Chọn Cột Xuất File
+            </h2>
+            <div class="flex items-center gap-2">
+              <button onclick="selectAllColumns(true)" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-emerald-400 transition">
+                <i class="fa-solid fa-check-double"></i> Chọn tất cả
+              </button>
+              <button onclick="selectAllColumns(false)" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-rose-400 transition">
+                <i class="fa-solid fa-xmark"></i> Bỏ chọn tất cả
+              </button>
+            </div>
+          </div>
+
+          <div id="columnSelectionContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-56 overflow-y-auto custom-scrollbar p-1">
+            <p class="text-xs text-slate-500 col-span-2 text-center py-6 border border-slate-800/60 rounded-xl">Hãy nạp file Excel để chọn cột.</p>
+          </div>
+        </div>
+
+        <!-- PROCESS & EXPORT BAR -->
+        <div class="glass-card rounded-2xl p-6 space-y-4">
+          <div class="flex flex-col md:flex-row items-center gap-4">
+            <div class="flex-1 w-full">
+              <label class="block text-xs font-medium text-slate-400 mb-1">Tên File Đầu Ra (.xlsx)</label>
+              <input type="text" id="outputFileName" value="Data_Merged_File" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+            </div>
+            <button onclick="processAndMerge()" class="w-full md:w-auto px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-file-export text-base"></i> Bắt đầu Gộp & Xuất File
+            </button>
+          </div>
+
+          <!-- PROGRESS BAR -->
+          <div id="progressContainer" class="hidden space-y-1.5">
+            <div class="flex justify-between text-xs text-slate-400">
+              <span id="progressText">Đang xử lý...</span>
+              <span id="progressPercent">0%</span>
+            </div>
+            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div id="progressBar" class="h-full bg-emerald-500 w-0 transition-all duration-200"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- DATA PREVIEW TABLE -->
+    <div class="glass-card rounded-2xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+          <i class="fa-solid fa-table text-emerald-400"></i> Xem trước Dữ liệu (50 Dòng Đầu)
+        </h2>
+        <span id="previewCount" class="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">0 dòng</span>
+      </div>
+
+      <div class="overflow-x-auto custom-scrollbar border border-slate-800 rounded-xl">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead id="previewThead" class="bg-slate-900/80 text-slate-200 uppercase text-[10px] tracking-wider border-b border-slate-800">
+            <tr><th class="p-4 text-center text-slate-500">Chưa có dữ liệu preview</th></tr>
+          </thead>
+          <tbody id="previewTbody" class="divide-y divide-slate-800/60 bg-slate-950/30">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- LOGS CONSOLE -->
+    <div class="glass-card rounded-2xl p-6">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+          <i class="fa-solid fa-terminal text-slate-400"></i> Nhật ký hoạt động
+        </h2>
+        <button onclick="clearLogs()" class="text-xs text-slate-500 hover:text-slate-400 transition">Xóa nhật ký</button>
+      </div>
+      <div id="logConsole" class="bg-slate-950/80 rounded-xl p-4 h-32 overflow-y-auto custom-scrollbar font-mono text-xs space-y-1 border border-slate-800/80">
+        <div class="text-slate-500">[System]: Sẵn sàng gộp các file Excel...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // State management
+    let filesArray = [];
+    let detectedColumns = [];
+    let lastMergedRows = [];
+
+    // --- LOGGING ---
+    function addLog(msg, type = 'info') {
+      const consoleEl = document.getElementById('logConsole');
+      const time = new Date().toLocaleTimeString();
+      let colorClass = 'text-slate-400';
+      if (type === 'success') colorClass = 'text-emerald-400';
+      if (type === 'warn') colorClass = 'text-amber-400';
+      if (type === 'error') colorClass = 'text-rose-400';
+
+      const line = document.createElement('div');
+      line.className = colorClass;
+      line.innerHTML = `<span class="text-slate-600">[${time}]</span> ${msg}`;
+      consoleEl.appendChild(line);
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    function clearLogs() {
+      document.getElementById('logConsole').innerHTML = '<div class="text-slate-500">[System]: Nhật ký đã được làm sạch.</div>';
+    }
+
+    // --- FILE HANDLING ---
+    function handleFilesSelect(e) {
+      const selectedFiles = Array.from(e.target.files);
+      addFiles(selectedFiles);
+    }
+
+    // Drag and Drop
+    const dropZone = document.getElementById('dropZone');
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-emerald-500'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-emerald-500'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-emerald-500');
+      if (e.dataTransfer.files.length > 0) {
+        addFiles(Array.from(e.dataTransfer.files));
+      }
+    });
+
+    function addFiles(files) {
+      files.forEach(file => {
+        if (!filesArray.some(f => f.name === file.name && f.size === file.size)) {
+          filesArray.push(file);
+          addLog(`Đã thêm file: ${file.name}`, 'info');
+        }
+      });
+      updateFileListUI();
+      scanColumnsFromFiles();
+    }
+
+    function removeFile(index) {
+      const name = filesArray[index].name;
+      filesArray.splice(index, 1);
+      addLog(`Đã xóa file: ${name}`, 'warn');
+      updateFileListUI();
+      scanColumnsFromFiles();
+    }
+
+    function removeAllFiles() {
+      filesArray = [];
+      detectedColumns = [];
+      lastMergedRows = [];
+      addLog('Đã xóa tất cả các file.', 'warn');
+      updateFileListUI();
+      renderColumnSelection();
+      renderPreview([]);
+    }
+
+    function moveFile(index, direction) {
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= filesArray.length) return;
+      const temp = filesArray[index];
+      filesArray[index] = filesArray[targetIndex];
+      filesArray[targetIndex] = temp;
+      updateFileListUI();
+    }
+
+    function updateFileListUI() {
+      const fileListEl = document.getElementById('fileList');
+      const fileCountEl = document.getElementById('fileCount');
+      const totalSizeEl = document.getElementById('totalSize');
+
+      fileCountEl.textContent = filesArray.length;
+      let totalSizeBytes = filesArray.reduce((acc, f) => acc + f.size, 0);
+      totalSizeEl.textContent = (totalSizeBytes / (1024 * 1024)).toFixed(2) + ' MB';
+
+      if (filesArray.length === 0) {
+        fileListEl.innerHTML = '<p class="text-xs text-slate-500 text-center py-6 border border-slate-800/60 rounded-xl">Chưa có file nào được nạp.</p>';
+        return;
+      }
+
+      fileListEl.innerHTML = filesArray.map((file, idx) => `
+        <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition">
+          <div class="flex items-center gap-3 truncate mr-2">
+            <i class="fa-solid fa-file-excel text-emerald-400"></i>
+            <div class="truncate">
+              <p class="text-xs font-medium text-slate-200 truncate">${file.name}</p>
+              <p class="text-[10px] text-slate-500">${(file.size / 1024).toFixed(1)} KB</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button onclick="moveFile(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-300 text-xs flex items-center justify-center">
+              <i class="fa-solid fa-chevron-up"></i>
+            </button>
+            <button onclick="moveFile(${idx}, 1)" ${idx === filesArray.length - 1 ? 'disabled' : ''} class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-300 text-xs flex items-center justify-center">
+              <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <button onclick="removeFile(${idx})" class="w-6 h-6 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs flex items-center justify-center ml-1">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // --- COLUMN SCANNING ---
+    async function scanColumnsFromFiles() {
+      if (filesArray.length === 0) {
+        detectedColumns = [];
+        renderColumnSelection();
+        return;
+      }
+
+      const colSet = new Set();
+
+      for (let file of filesArray) {
+        try {
+          const buffer = await file.arrayBuffer();
+          const workbook = XLSX.read(buffer, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[firstSheetName];
+          const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          if (json.length > 0) {
+            const headers = json[0];
+            if (Array.isArray(headers)) {
+              headers.forEach(h => {
+                if (h !== undefined && h !== null) colSet.add(String(h).trim());
+              });
+            }
+          }
+        } catch (err) {
+          addLog(`Lỗi đọc tiêu đề cột file ${file.name}: ${err.message}`, 'error');
+        }
+      }
+
+      detectedColumns = Array.from(colSet);
+      renderColumnSelection();
+    }
+
+    function renderColumnSelection() {
+      const container = document.getElementById('columnSelectionContainer');
+      if (detectedColumns.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-500 col-span-2 text-center py-6 border border-slate-800/60 rounded-xl">Chưa tìm thấy tiêu đề cột nào.</p>';
+        return;
+      }
+
+      container.innerHTML = detectedColumns.map((col, idx) => `
+        <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-900/50 border border-slate-800">
+          <input type="checkbox" id="col_chk_${idx}" value="${col}" checked class="col-checkbox rounded border-slate-700 bg-slate-800 text-emerald-500 focus:ring-emerald-500">
+          <span class="text-xs text-slate-300 font-medium truncate w-1/3" title="${col}">${col}</span>
+          <i class="fa-solid fa-arrow-right text-[10px] text-slate-600"></i>
+          <input type="text" id="col_ren_${idx}" value="${col}" placeholder="Tên cột mới" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+        </div>
+      `).join('');
+    }
+
+    function selectAllColumns(select) {
+      const checkboxes = document.querySelectorAll('.col-checkbox');
+      checkboxes.forEach(cb => cb.checked = select);
+      addLog(select ? 'Đã chọn tất cả các cột.' : 'Đã bỏ chọn tất cả các cột.', 'info');
+    }
+
+    // --- PROCESSING & MERGING ---
+    async function processAndMerge() {
+      if (filesArray.length === 0) {
+        alert('Vui lòng nạp ít nhất 1 file Excel hoặc CSV!');
+        addLog('Chưa có file để xử lý.', 'error');
+        return;
+      }
+
+      const progressContainer = document.getElementById('progressContainer');
+      const progressBar = document.getElementById('progressBar');
+      const progressText = document.getElementById('progressText');
+      const progressPercent = document.getElementById('progressPercent');
+
+      progressContainer.classList.remove('hidden');
+      progressBar.style.width = '0%';
+
+      const mode = document.querySelector('input[name="mergeMode"]:checked').value;
+      const addSrcFile = document.getElementById('addSourceFile').checked;
+      const addSrcSheet = document.getElementById('addSourceSheet').checked;
+      const autoFit = document.getElementById('autoFitCols').checked;
+
+      // Prepare Column Mappings
+      const selectedColMappings = [];
+      const checkboxes = document.querySelectorAll('.col-checkbox');
+      checkboxes.forEach((cb, idx) => {
+        if (cb.checked) {
+          const originalName = cb.value;
+          const newName = document.getElementById(`col_ren_${idx}`).value.trim() || originalName;
+          selectedColMappings.push({ original: originalName, renamed: newName });
+        }
+      });
+
+      if (mode === 'append' && selectedColMappings.length === 0) {
+        alert('Vui lòng chọn ít nhất 1 cột để xuất!');
+        addLog('Chưa chọn cột nào.', 'error');
+        progressContainer.classList.add('hidden');
+        return;
+      }
+
+      try {
+        addLog('Bắt đầu gộp file...', 'info');
+        const mergedWorkbook = XLSX.utils.book_new();
+        let allMergedRows = [];
+
+        for (let i = 0; i < filesArray.length; i++) {
+          const file = filesArray[i];
+          const percent = Math.round(((i + 1) / filesArray.length) * 100);
+          progressBar.style.width = percent + '%';
+          progressPercent.textContent = percent + '%';
+          progressText.textContent = `Đang đọc (${i + 1}/${filesArray.length}): ${file.name}`;
+
+          const buffer = await file.arrayBuffer();
+          const wb = XLSX.read(buffer, { type: 'array' });
+
+          if (mode === 'append') {
+            wb.SheetNames.forEach(sheetName => {
+              const sheet = wb.Sheets[sheetName];
+              const jsonRows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+              jsonRows.forEach(row => {
+                const formattedRow = {};
+                
+                if (addSrcFile) formattedRow['File Nguồn'] = file.name;
+                if (addSrcSheet) formattedRow['Sheet Nguồn'] = sheetName;
+
+                selectedColMappings.forEach(col => {
+                  formattedRow[col.renamed] = row[col.original] !== undefined ? row[col.original] : "";
+                });
+
+                allMergedRows.push(formattedRow);
+              });
+            });
+          } else {
+            // Mode: Multiple Sheets
+            wb.SheetNames.forEach((sheetName) => {
+              let safeSheetName = `${file.name.replace(/\.[^/.]+$/, "")}_${sheetName}`.substring(0, 30);
+              const sheet = wb.Sheets[sheetName];
+              XLSX.utils.book_append_sheet(mergedWorkbook, sheet, safeSheetName);
+            });
+          }
+        }
+
+        if (mode === 'append') {
+          lastMergedRows = allMergedRows;
+          const mergedSheet = XLSX.utils.json_to_sheet(allMergedRows);
+
+          // Auto-fit Column Widths
+          if (autoFit && allMergedRows.length > 0) {
+            const keys = Object.keys(allMergedRows[0]);
+            const colWidths = keys.map(key => {
+              let maxLen = key.toString().length;
+              allMergedRows.slice(0, 100).forEach(r => {
+                const val = r[key] ? r[key].toString() : '';
+                if (val.length > maxLen) maxLen = val.length;
+              });
+              return { wch: Math.min(Math.max(maxLen + 3, 10), 60) };
+            });
+            mergedSheet['!cols'] = colWidths;
+          }
+
+          XLSX.utils.book_append_sheet(mergedWorkbook, mergedSheet, "Data_Merged");
+          renderPreview(allMergedRows);
+        }
+
+        // TRIGGER DOWNLOAD USING BLOB URL
+        const filename = (document.getElementById('outputFileName').value.trim() || 'Data_Merged_File') + '.xlsx';
+        const wbout = XLSX.write(mergedWorkbook, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/octet-stream' });
+
+        const blobUrl = URL.createObjectURL(blob);
+        const downloadLink = document.createElement('a');
+        downloadLink.href = blobUrl;
+        downloadLink.download = filename;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+
+        setTimeout(() => {
+          document.body.removeChild(downloadLink);
+          URL.revokeObjectURL(blobUrl);
+        }, 1000);
+
+        addLog(`Gộp & Xuất file thành công: ${filename}`, 'success');
+      } catch (err) {
+        addLog(`Lỗi xử lý file: ${err.message}`, 'error');
+        alert('Đã xảy ra lỗi trong quá trình xử lý file: ' + err.message);
+      } finally {
+        setTimeout(() => {
+          progressContainer.classList.add('hidden');
+        }, 800);
+      }
+    }
+
+    // --- RENDER PREVIEW TABLE ---
+    function renderPreview(rows) {
+      const thead = document.getElementById('previewThead');
+      const tbody = document.getElementById('previewTbody');
+      const previewCount = document.getElementById('previewCount');
+
+      previewCount.textContent = rows.length + ' dòng';
+
+      if (!rows || rows.length === 0) {
+        thead.innerHTML = '<tr><th class="p-4 text-center text-slate-500">Chưa có dữ liệu preview</th></tr>';
+        tbody.innerHTML = '';
+        return;
+      }
+
+      const keys = Object.keys(rows[0]);
+      thead.innerHTML = `<tr>${keys.map(k => `<th class="p-3 text-slate-300 font-semibold border-b border-slate-800">${k}</th>`).join('')}</tr>`;
+
+      const previewRows = rows.slice(0, 50);
+      tbody.innerHTML = previewRows.map(row => `
+        <tr class="hover:bg-slate-900/40 transition">
+          ${keys.map(k => `<td class="p-3 border-b border-slate-800/40 truncate max-w-xs">${row[k] !== undefined ? row[k] : ''}</td>`).join('')}
+        </tr>
+      `).join('');
+    }
+
+    // Save app directly as HTML file
+    function downloadSelfHtml() {
+      const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'excel_merger_pro_offline.html';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      }, 500);
+      addLog('Đã lưu ứng dụng về máy thành công.', 'success');
+    }
+  </script>
+</body>
+</html>
