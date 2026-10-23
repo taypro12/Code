@@ -1,0 +1,337 @@
+Search
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công cụ Tìm kiếm File & Nội dung Excel/Text Offline Pro</title>
+    <!-- Thư viện SheetJS đọc Excel cục bộ / qua CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #006837;
+            --accent: #00a88f;
+            --bg: #f4f6f8;
+            --card: #ffffff;
+            --text: #1c252e;
+            --border: #e0e6ed;
+        }
+        body {
+            margin: 0; padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+        }
+        .container {
+            max-width: 1300px; margin: 0 auto;
+            background: var(--card); padding: 25px;
+            border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        h2 { margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+        
+        .control-panel {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px; margin-bottom: 20px; padding: 15px;
+            background: #f8fafc; border: 1px solid var(--border); border-radius: 6px;
+        }
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-weight: 600; font-size: 0.85rem; color: #555; }
+        input[type="text"], input[type="file"], input[type="number"] {
+            padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9rem;
+        }
+        input[type="text"], input[type="number"] { width: 100%; box-sizing: border-box; }
+        
+        .advanced-options {
+            grid-column: span 2; display: flex; gap: 15px; align-items: center;
+            background: #eef2f6; padding: 10px; border-radius: 4px; font-size: 0.88rem; flex-wrap: wrap;
+        }
+        .btn-group { display: flex; align-items: flex-end; gap: 10px; grid-column: span 2; }
+        
+        .btn {
+            background: var(--primary); color: white; border: none; padding: 9px 20px;
+            border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.9rem; height: 38px;
+        }
+        .btn:hover { background: #004d25; }
+        .btn-sec { background: #546e7a; }
+        .btn-sec:hover { background: #37474f; }
+        
+        #status-bar {
+            font-size: 0.9rem; margin-bottom: 15px; font-weight: 600; color: #637381;
+        }
+        .table-box {
+            overflow-x: auto; max-height: 500px; border: 1px solid var(--border); border-radius: 6px;
+        }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem; }
+        th, td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+        th { background: #e8f5e9; color: var(--primary); position: sticky; top: 0; z-index: 5; font-weight: 600; cursor: pointer; user-select: none; }
+        th:hover { background: #d0e8d4; }
+        tr:hover { background: #f8f9fa; }
+        .badge { background: #e2e8f0; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+        .match-content { color: #0288d1; font-style: italic; }
+        .text-center { text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>🔍 Tìm kiếm Tệp & Nội dung (Hỗ trợ cả Excel & Text)</h2>
+        
+        <!-- Bảng điều khiển tìm kiếm -->
+        <div class="control-panel">
+            <div class="control-group" style="grid-column: span 2;">
+                <label>1. Chọn Thư mục cần quét:</label>
+                <input type="file" id="folderInput" webkitdirectory multiple>
+            </div>
+            
+            <div class="control-group">
+                <label>2. Tìm theo Tên File:</label>
+                <input type="text" id="searchName" placeholder="vd: report, sap-stock...">
+            </div>
+            
+            <div class="control-group">
+                <label>3. Lọc Định dạng (xlsx, xls, csv, txt...):</label>
+                <input type="text" id="searchExt" placeholder="vd: xlsx, csv, txt...">
+            </div>
+            
+            <div class="control-group" style="grid-column: span 2;">
+                <label>4. Tìm Từ khóa bên trong Tệp (Excel, CSV, Text):</label>
+                <input type="text" id="searchContent" placeholder="Nhập mã Material, tên vật tư cần tìm trong file...">
+            </div>
+
+            <div class="advanced-options">
+                <span><b>Bộ lọc bổ sung:</b></span>
+                <label>Min Size (KB): <input type="number" id="minSize" placeholder="0" style="width: 70px;"></label>
+                <label>Max Size (KB): <input type="number" id="maxSize" placeholder="Không giới hạn" style="width: 100px;"></label>
+                <label><input type="checkbox" id="caseSensitive"> Khớp chữ hoa/thường</label>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn" onclick="executeSearch()">Bắt đầu Tìm kiếm</button>
+                <button class="btn btn-sec" onclick="exportResultsCSV()">Xuất Kết quả CSV</button>
+                <button class="btn btn-sec" onclick="resetForm()">Làm mới</button>
+            </div>
+        </div>
+
+        <div id="status-bar">Chưa chọn thư mục hoặc chưa thực hiện tìm kiếm.</div>
+
+        <!-- Bảng kết quả -->
+        <div class="table-box">
+            <table id="resultTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable('name')">Tên File ⌁</th>
+                        <th onclick="sortTable('path')">Đường dẫn / Thư mục ⌁</th>
+                        <th onclick="sortTable('ext')">Định dạng ⌁</th>
+                        <th onclick="sortTable('rawSize')">Kích thước ⌁</th>
+                        <th>Khớp theo tiêu chí</th>
+                    </tr>
+                </thead>
+                <tbody id="resultBody">
+                    <tr><td colspan="5" class="text-center">Vui lòng chọn thư mục và nhập từ khóa tìm kiếm.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let cachedFiles = [];
+        let lastSearchResults = [];
+        let sortDirection = {};
+
+        document.getElementById('folderInput').addEventListener('change', function(e) {
+            cachedFiles = Array.from(e.target.files);
+            document.getElementById('status-bar').innerText = `Đã nạp ${cachedFiles.length} tệp vào bộ nhớ tạm. Sẵn sàng tìm kiếm.`;
+        });
+
+        async function executeSearch() {
+            if (cachedFiles.length === 0) {
+                alert("Vui lòng chọn thư mục trước khi tìm kiếm!");
+                return;
+            }
+
+            const rawNameKw = document.getElementById('searchName').value.trim();
+            const rawExtKw = document.getElementById('searchExt').value.toLowerCase().trim();
+            const rawContentKw = document.getElementById('searchContent').value.trim();
+            const caseSensitive = document.getElementById('caseSensitive').checked;
+            
+            const minSizeKB = parseFloat(document.getElementById('minSize').value) || 0;
+            const maxSizeKB = parseFloat(document.getElementById('maxSize').value) || Infinity;
+
+            const nameKw = caseSensitive ? rawNameKw : rawNameKw.toLowerCase();
+            const contentKw = caseSensitive ? rawContentKw : rawContentKw.toLowerCase();
+
+            let allowedExts = [];
+            if (rawExtKw) {
+                allowedExts = rawExtKw.split(',').map(e => e.trim().replace(/^\./, '').toLowerCase());
+            }
+
+            const statusEl = document.getElementById('status-bar');
+            const tbody = document.getElementById('resultBody');
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center">Đang quét và phân tích dữ liệu (bao gồm cả tệp Excel)...</td></tr>`;
+            statusEl.innerText = "Đang xử lý...";
+
+            lastSearchResults = [];
+
+            for (let file of cachedFiles) {
+                let fileName = file.name;
+                let fileExt = fileName.split('.').pop().toLowerCase();
+                let relativePath = file.webkitRelativePath || file.name;
+                let fileSizeKB = file.size / 1024;
+
+                if (fileSizeKB < minSizeKB || fileSizeKB > maxSizeKB) continue;
+
+                let checkName = caseSensitive ? fileName : fileName.toLowerCase();
+                let matchName = !rawNameKw || checkName.includes(nameKw);
+                let matchExt = allowedExts.length === 0 || allowedExts.includes(fileExt);
+
+                if (!matchName || !matchExt) continue;
+
+                let matchType = [];
+                if (rawNameKw) matchType.push("Tên file");
+                if (allowedExts.length > 0) matchType.push("Định dạng");
+
+                let matchContent = true;
+                // Kiểm tra nội dung nếu có từ khóa tìm kiếm nội dung
+                if (rawContentKw) {
+                    if (file.size < 15 * 1024 * 1024) { // Hỗ trợ file dung lượng dưới 15MB
+                        try {
+                            let textContent = "";
+                            if (['xlsx', 'xls'].includes(fileExt)) {
+                                // Đọc nội dung tệp Excel bằng SheetJS
+                                const arrayBuffer = await file.arrayBuffer();
+                                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                                workbook.SheetNames.forEach(sheetName => {
+                                    const sheet = workbook.Sheets[sheetName];
+                                    textContent += XLSX.utils.sheet_to_csv(sheet) + "\n";
+                                });
+                            } else if (isTextFile(fileExt)) {
+                                textContent = await file.text();
+                            }
+
+                            if (textContent) {
+                                let checkContent = caseSensitive ? textContent : textContent.toLowerCase();
+                                if (checkContent.includes(contentKw)) {
+                                    matchType.push("Nội dung");
+                                } else {
+                                    matchContent = false;
+                                }
+                            } else {
+                                matchContent = false;
+                            }
+                        } catch (err) {
+                            matchContent = false;
+                        }
+                    } else {
+                        matchContent = false;
+                    }
+                }
+
+                if (matchName && matchExt && matchContent) {
+                    lastSearchResults.push({
+                        name: fileName,
+                        path: relativePath,
+                        ext: fileExt,
+                        rawSize: file.size,
+                        size: formatBytes(file.size),
+                        match: matchType.join(" + ") || "Khớp điều kiện"
+                    });
+                }
+            }
+
+            renderTable(lastSearchResults);
+            statusEl.innerText = `Tìm thấy ${lastSearchResults.length} kết quả phù hợp trên tổng số ${cachedFiles.length} tệp.`;
+        }
+
+        function renderTable(results) {
+            const tbody = document.getElementById('resultBody');
+            tbody.innerHTML = '';
+            if (results.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center">Không tìm thấy tệp nào phù hợp với điều kiện.</td></tr>`;
+                return;
+            }
+            results.forEach(r => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${escapeHtml(r.name)}</strong></td>
+                        <td><small style="color: #666;">${escapeHtml(r.path)}</small></td>
+                        <td><span class="badge">.${escapeHtml(r.ext)}</span></td>
+                        <td>${r.size}</td>
+                        <td><span class="match-content">${r.match}</span></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function sortTable(column) {
+            if (lastSearchResults.length === 0) return;
+            if (!sortDirection[column]) sortDirection[column] = 'asc';
+            else sortDirection[column] = sortDirection[column] === 'asc' ? 'desc' : 'asc';
+
+            const dir = sortDirection[column];
+            lastSearchResults.sort((a, b) => {
+                let valA = a[column];
+                let valB = b[column];
+                if (typeof valA === 'number' && typeof valB === 'number') {
+                    return dir === 'asc' ? valA - valB : valB - valA;
+                }
+                valA = String(valA).toLowerCase();
+                valB = String(valB).toLowerCase();
+                if (valA < valB) return dir === 'asc' ? -1 : 1;
+                if (valA > valB) return dir === 'asc' ? 1 : -1;
+                return 0;
+            });
+            renderTable(lastSearchResults);
+        }
+
+        function exportResultsCSV() {
+            if (lastSearchResults.length === 0) {
+                alert("Không có kết quả tìm kiếm để xuất!");
+                return;
+            }
+            let csv = "FileName,Path,Extension,Size,MatchType\n";
+            lastSearchResults.forEach(r => {
+                csv += `"${r.name}","${r.path}","${r.ext}","${r.size}","${r.match}"\n`;
+            });
+            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `FileSearch_Results_${Date.now()}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function isTextFile(ext) {
+            const textExts = ['txt', 'csv', 'log', 'json', 'html', 'htm', 'xml', 'js', 'css', 'md', 'bat', 'ini', 'cfg'];
+            return textExts.includes(ext);
+        }
+
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function resetForm() {
+            document.getElementById('folderInput').value = '';
+            document.getElementById('searchName').value = '';
+            document.getElementById('searchExt').value = '';
+            document.getElementById('searchContent').value = '';
+            document.getElementById('minSize').value = '';
+            document.getElementById('maxSize').value = '';
+            document.getElementById('caseSensitive').checked = false;
+            document.getElementById('resultBody').innerHTML = `<tr><td colspan="5" class="text-center">Vui lòng chọn thư mục và nhập từ khóa tìm kiếm.</td></tr>`;
+            document.getElementById('status-bar').innerText = "Đã làm mới bộ lọc.";
+            cachedFiles = [];
+            lastSearchResults = [];
+        }
+    </script>
+</body>
+</html>
