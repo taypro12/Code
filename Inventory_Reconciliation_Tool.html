@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công Cụ Đối Chiếu & Tổng Hợp Tồn Kho Excel</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS (xlsx) CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Custom Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-slate-900 text-white shadow-md border-b border-slate-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 p-2 rounded-lg text-white">
+                    <i data-lucide="file-spreadsheet" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">StockSync Pro</h1>
+                    <p class="text-xs text-slate-400">Đối chiếu & Tổng hợp Tồn kho Excel Linh hoạt</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="downloadSampleData()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg flex items-center space-x-1 transition">
+                    <i data-lucide="download-cloud" class="w-4 h-4"></i>
+                    <span>Tải File Mẫu Test</span>
+                </button>
+                <div class="flex items-center text-xs bg-emerald-950 text-emerald-400 border border-emerald-800/50 px-2.5 py-1 rounded-full">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 mr-2 animate-pulse"></span>
+                    Offline Mode (100% Bảo mật)
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Step 1: Mode & Configuration -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="bg-slate-100/80 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="bg-indigo-600 text-white font-bold text-xs px-2.5 py-1 rounded-full">Bước 1</span>
+                    <h2 class="font-semibold text-slate-800">Cấu hình & Nguồn Dữ Liệu</h2>
+                </div>
+                <button id="toggleConfigBtn" onclick="toggleConfigSection()" class="text-xs text-slate-500 hover:text-indigo-600 flex items-center space-x-1">
+                    <span>Thu gọn</span>
+                    <i data-lucide="chevron-up" class="w-4 h-4" id="toggleIcon"></i>
+                </button>
+            </div>
+            
+            <div id="configSection" class="p-6 space-y-6">
+                <!-- Mode Selection -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <label class="relative flex p-4 rounded-xl border-2 cursor-pointer transition-all hover:border-indigo-200" id="modeCard1">
+                        <input type="radio" name="appMode" value="compare" checked onchange="handleModeChange()" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
+                        <div class="ml-3">
+                            <span class="block text-sm font-semibold text-slate-900">1. Đối chiếu 2 File Excel</span>
+                            <span class="block text-xs text-slate-500 mt-1">So sánh tồn kho giữa 2 báo cáo (SAP vs Thực tế, Kho A vs Kho B), tìm mã lệch, thừa/thiếu.</span>
+                        </div>
+                    </label>
+
+                    <label class="relative flex p-4 rounded-xl border-2 cursor-pointer transition-all hover:border-indigo-200" id="modeCard2">
+                        <input type="radio" name="appMode" value="aggregate" onchange="handleModeChange()" class="mt-0.5 text-indigo-600 focus:ring-indigo-500">
+                        <div class="ml-3">
+                            <span class="block text-sm font-semibold text-slate-900">2. Tổng hợp 1 File Excel</span>
+                            <span class="block text-xs text-slate-500 mt-1">Tự động gom nhóm, cộng dồn số lượng và giá trị theo mã SAP/Kho/Batch từ 1 file dữ liệu thô.</span>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- File Upload Areas -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="uploadGrid">
+                    <!-- File 1 Dropzone -->
+                    <div class="space-y-2" id="file1Container">
+                        <label class="block text-sm font-medium text-slate-700 flex justify-between">
+                            <span id="file1Label">File Excel gốc / Báo cáo 1 (Hệ thống / SAP):</span>
+                            <span id="file1Status" class="text-xs text-slate-400">Chưa chọn file</span>
+                        </label>
+                        <div class="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-xl p-6 text-center bg-slate-50 hover:bg-indigo-50/30 transition cursor-pointer relative" id="dropzone1">
+                            <input type="file" id="fileInput1" accept=".xlsx, .xls, .csv" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect(1, event)">
+                            <div class="space-y-2 pointer-events-none">
+                                <i data-lucide="upload-cloud" class="w-8 h-8 mx-auto text-slate-400"></i>
+                                <p class="text-sm font-medium text-slate-700" id="file1Text">Kéo thả file Excel vào đây hoặc <span class="text-indigo-600">chọn file</span></p>
+                                <p class="text-xs text-slate-400">Hỗ trợ .xlsx, .xls, .csv</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File 2 Dropzone -->
+                    <div class="space-y-2" id="file2Container">
+                        <label class="block text-sm font-medium text-slate-700 flex justify-between">
+                            <span>File Excel đối chiếu / Báo cáo 2 (Kiểm kê / Thực tế):</span>
+                            <span id="file2Status" class="text-xs text-slate-400">Chưa chọn file</span>
+                        </label>
+                        <div class="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-xl p-6 text-center bg-slate-50 hover:bg-indigo-50/30 transition cursor-pointer relative" id="dropzone2">
+                            <input type="file" id="fileInput2" accept=".xlsx, .xls, .csv" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleFileSelect(2, event)">
+                            <div class="space-y-2 pointer-events-none">
+                                <i data-lucide="upload-cloud" class="w-8 h-8 mx-auto text-slate-400"></i>
+                                <p class="text-sm font-medium text-slate-700" id="file2Text">Kéo thả file Excel vào đây hoặc <span class="text-indigo-600">chọn file</span></p>
+                                <p class="text-xs text-slate-400">Hỗ trợ .xlsx, .xls, .csv</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column Mapping Panel (Rendered after file load) -->
+                <div id="mappingPanel" class="hidden border-t border-slate-200 pt-6 space-y-6">
+                    <h3 class="font-semibold text-slate-800 text-sm flex items-center space-x-2">
+                        <i data-lucide="sliders" class="w-4 h-4 text-indigo-600"></i>
+                        <span>Ghép Cột Linh Hoạt & Chọn Giá Trị Báo Cáo</span>
+                    </h3>
+
+                    <!-- Mapping grids -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <!-- File 1 mapping -->
+                        <div class="space-y-4">
+                            <p class="font-medium text-xs text-indigo-700 uppercase tracking-wider border-b border-slate-200 pb-2" id="mappingTitle1">Cột Dữ Liệu File 1</p>
+                            
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Khóa Khóa ghép chính (Chọn 1 hoặc nhiều cột, ví dụ: Mã SAP + Kho):</label>
+                                <div id="keyColsFile1" class="flex flex-wrap gap-2 min-h-[38px] p-2 bg-white border border-slate-300 rounded-lg">
+                                    <!-- Checkboxes generated dynamically -->
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Cột Số Lượng:</label>
+                                    <select id="qtyColFile1" class="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 focus:ring-indigo-500 focus:border-indigo-500"></select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Cột Đơn Giá / Giá Trị (Tùy chọn):</label>
+                                    <select id="valColFile1" class="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 focus:ring-indigo-500 focus:border-indigo-500"></select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- File 2 mapping -->
+                        <div class="space-y-4" id="mappingFile2Section">
+                            <p class="font-medium text-xs text-indigo-700 uppercase tracking-wider border-b border-slate-200 pb-2">Cột Dữ Liệu File 2</p>
+                            
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Khóa Khóa ghép đối ứng (Theo đúng thứ tự ở File 1):</label>
+                                <div id="keyColsFile2" class="flex flex-wrap gap-2 min-h-[38px] p-2 bg-white border border-slate-300 rounded-lg">
+                                    <!-- Checkboxes generated dynamically -->
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Cột Số Lượng:</label>
+                                    <select id="qtyColFile2" class="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 focus:ring-indigo-500 focus:border-indigo-500"></select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Cột Đơn Giá / Giá Trị (Tùy chọn):</label>
+                                    <select id="valColFile2" class="w-full text-xs bg-white border border-slate-300 rounded-lg p-2 focus:ring-indigo-500 focus:border-indigo-500"></select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Threshold & Additional Controls -->
+                    <div class="flex flex-wrap items-center justify-between gap-4 pt-2">
+                        <div class="flex items-center space-x-4">
+                            <div class="flex items-center space-x-2">
+                                <label for="diffThreshold" class="text-xs font-semibold text-slate-700 whitespace-nowrap">Ngưỡng Chênh Lệch Cho Phép (|SL| ≤):</label>
+                                <input type="number" id="diffThreshold" value="0" step="any" class="w-20 text-xs border border-slate-300 rounded-lg p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <input type="checkbox" id="ignoreCase" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                                <label for="ignoreCase" class="text-xs text-slate-700">Bỏ qua chữ hoa/thường & khoảng trắng dư</label>
+                            </div>
+                        </div>
+
+                        <button onclick="processData()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-semibold text-sm shadow-md shadow-indigo-200 flex items-center space-x-2 transition">
+                            <i data-lucide="play" class="w-4 h-4"></i>
+                            <span>Xử Lý & Lập Báo Cáo</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Summary Dashboard (Hidden until processed) -->
+        <div id="summarySection" class="hidden space-y-6">
+            <!-- Metrics Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <p class="text-xs text-slate-500 font-medium">Tổng Mã Đối Chiếu</p>
+                    <p class="text-2xl font-bold text-slate-800 mt-1" id="statTotal">0</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Khóa duy nhất được xử lý</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <p class="text-xs text-emerald-600 font-medium">Khớp Hoàn Toàn</p>
+                    <p class="text-2xl font-bold text-emerald-600 mt-1" id="statMatched">0</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Chênh lệch trong ngưỡng</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <p class="text-xs text-amber-600 font-medium">Lệch Số Lượng</p>
+                    <p class="text-2xl font-bold text-amber-600 mt-1" id="statDiff">0</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Vượt ngưỡng chênh lệch</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <p class="text-xs text-rose-600 font-medium">Mã Thiếu / Chỉ Có ở 1 Bên</p>
+                    <p class="text-2xl font-bold text-rose-600 mt-1" id="statMissing">0</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Mã không tìm thấy ở file còn lại</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <p class="text-xs text-indigo-600 font-medium">Tổng Chênh Lệch SL</p>
+                    <p class="text-2xl font-bold text-indigo-600 mt-1" id="statTotalDiffQty">0</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Tổng tuyệt đối chênh lệch</p>
+                </div>
+            </div>
+
+            <!-- Detailed Table & Export Area -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden space-y-4 p-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <!-- Filters & Search -->
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="relative">
+                            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                            <input type="text" id="searchInput" oninput="filterResults()" placeholder="Tìm theo Mã SAP, tên, kho..." class="pl-9 pr-4 py-2 text-xs border border-slate-300 rounded-lg w-64 focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <select id="statusFilter" onchange="filterResults()" class="text-xs border border-slate-300 rounded-lg p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="ALL">Tất cả trạng thái</option>
+                            <option value="MATCHED">Khớp hoàn toàn</option>
+                            <option value="DIFF">Chênh lệch số lượng</option>
+                            <option value="ONLY_1">Chỉ có ở File 1</option>
+                            <option value="ONLY_2">Chỉ có ở File 2</option>
+                        </select>
+                    </div>
+
+                    <!-- Export Buttons -->
+                    <div class="flex items-center space-x-3">
+                        <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium text-xs flex items-center space-x-1.5 shadow-sm transition">
+                            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                            <span>Xuất Excel (.XLSX) Full Báo Cáo</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table Preview -->
+                <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                    <table class="w-full text-left text-xs text-slate-600" id="resultTable">
+                        <thead class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200 uppercase tracking-wider text-[11px]">
+                            <tr id="tableHeader">
+                                <!-- Dynamic Headers -->
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200" id="tableBody">
+                            <!-- Dynamic Rows -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination Footer -->
+                <div class="flex items-center justify-between pt-2">
+                    <p class="text-xs text-slate-500" id="paginationInfo">Hiển thị 0 / 0 dòng</p>
+                    <div class="flex space-x-2" id="paginationBtns">
+                        <!-- Dynamic pagination buttons -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-8">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
+            StockSync Pro &bull; Công cụ xử lý dữ liệu tồn kho chạy trực tiếp trên trình duyệt &bull; Không gửi dữ liệu lên Server
+        </div>
+    </footer>
+
+    <!-- App Logic Script -->
+    <script>
+        // Global State
+        let currentMode = 'compare'; // 'compare' or 'aggregate'
+        let rawDataFile1 = null;
+        let rawDataFile2 = null;
+        let headersFile1 = [];
+        let headersFile2 = [];
+        let processedResults = [];
+        let filteredResults = [];
+
+        // Pagination State
+        let currentPage = 1;
+        const pageSize = 15;
+
+        // Initialize Lucide Icons on load
+        window.onload = function() {
+            lucide.createIcons();
+            handleModeChange();
+        };
+
+        // Toggle Config Section Accordion
+        function toggleConfigSection() {
+            const sec = document.getElementById('configSection');
+            const icon = document.getElementById('toggleIcon');
+            if (sec.classList.contains('hidden')) {
+                sec.classList.remove('hidden');
+                icon.setAttribute('data-lucide', 'chevron-up');
+            } else {
+                sec.classList.add('hidden');
+                icon.setAttribute('data-lucide', 'chevron-down');
+            }
+            lucide.createIcons();
+        }
+
+        // Mode Switching
+        function handleModeChange() {
+            const selectedMode = document.querySelector('input[name="appMode"]:checked').value;
+            currentMode = selectedMode;
+
+            const card1 = document.getElementById('modeCard1');
+            const card2 = document.getElementById('modeCard2');
+            const file2Container = document.getElementById('file2Container');
+            const mappingFile2Section = document.getElementById('mappingFile2Section');
+            const file1Label = document.getElementById('file1Label');
+            const mappingTitle1 = document.getElementById('mappingTitle1');
+
+            if (currentMode === 'compare') {
+                card1.classList.add('border-indigo-600', 'bg-indigo-50/20');
+                card2.classList.remove('border-indigo-600', 'bg-indigo-50/20');
+                file2Container.classList.remove('hidden');
+                mappingFile2Section.classList.remove('hidden');
+                file1Label.innerText = 'File Excel gốc / Báo cáo 1 (Hệ thống / SAP):';
+                mappingTitle1.innerText = 'Cột Dữ Liệu File 1';
+            } else {
+                card2.classList.add('border-indigo-600', 'bg-indigo-50/20');
+                card1.classList.remove('border-indigo-600', 'bg-indigo-50/20');
+                file2Container.classList.add('hidden');
+                mappingFile2Section.classList.add('hidden');
+                file1Label.innerText = 'File Excel dữ liệu tồn kho cần tổng hợp:';
+                mappingTitle1.innerText = 'Cột Dữ Liệu Tổng Hợp';
+            }
+            checkShowMapping();
+        }
+
+        // Handle File Selection & Parsing
+        function handleFileSelect(fileIndex, event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                if (json.length < 1) {
+                    alert('File không có dữ liệu!');
+                    return;
+                }
+
+                const headers = json[0].map(h => String(h).trim());
+                const rows = json.slice(1).map(row => {
+                    let rowObj = {};
+                    headers.forEach((h, idx) => {
+                        rowObj[h] = row[idx] !== undefined ? row[idx] : '';
+                    });
+                    return rowObj;
+                });
+
+                if (fileIndex === 1) {
+                    headersFile1 = headers;
+                    rawDataFile1 = rows;
+                    document.getElementById('file1Status').innerText = `Đã tải ${rows.length} dòng`;
+                    document.getElementById('file1Text').innerText = file.name;
+                } else {
+                    headersFile2 = headers;
+                    rawDataFile2 = rows;
+                    document.getElementById('file2Status').innerText = `Đã tải ${rows.length} dòng`;
+                    document.getElementById('file2Text').innerText = file.name;
+                }
+
+                checkShowMapping();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Check if conditions met to display mapping panel
+        function checkShowMapping() {
+            const panel = document.getElementById('mappingPanel');
+            if (currentMode === 'compare') {
+                if (rawDataFile1 && rawDataFile2) {
+                    panel.classList.remove('hidden');
+                    populateMappingOptions();
+                } else {
+                    panel.classList.add('hidden');
+                }
+            } else {
+                if (rawDataFile1) {
+                    panel.classList.remove('hidden');
+                    populateMappingOptions();
+                } else {
+                    panel.classList.add('hidden');
+                }
+            }
+        }
+
+        // Populate dynamic mapping selects & checkboxes
+        function populateMappingOptions() {
+            // File 1 Mapping
+            const keyColsContainer1 = document.getElementById('keyColsFile1');
+            keyColsContainer1.innerHTML = '';
+            headersFile1.forEach((h, i) => {
+                const isChecked = i === 0 ? 'checked' : '';
+                keyColsContainer1.innerHTML += `
+                    <label class="inline-flex items-center space-x-1 text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded cursor-pointer">
+                        <input type="checkbox" name="key1" value="${h}" ${isChecked} class="rounded text-indigo-600 focus:ring-indigo-500">
+                        <span>${h}</span>
+                    </label>
+                `;
+            });
+
+            populateSelect('qtyColFile1', headersFile1, ['số lượng', 'sl', 'qty', 'quantity', 'tồn']);
+            populateSelect('valColFile1', headersFile1, ['giá trị', 'thành tiền', 'đơn giá', 'val', 'amount'], true);
+
+            // File 2 Mapping
+            if (currentMode === 'compare') {
+                const keyColsContainer2 = document.getElementById('keyColsFile2');
+                keyColsContainer2.innerHTML = '';
+                headersFile2.forEach((h, i) => {
+                    const isChecked = i === 0 ? 'checked' : '';
+                    keyColsContainer2.innerHTML += `
+                        <label class="inline-flex items-center space-x-1 text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded cursor-pointer">
+                            <input type="checkbox" name="key2" value="${h}" ${isChecked} class="rounded text-indigo-600 focus:ring-indigo-500">
+                            <span>${h}</span>
+                        </label>
+                    `;
+                });
+
+                populateSelect('qtyColFile2', headersFile2, ['số lượng', 'sl', 'qty', 'quantity', 'tồn']);
+                populateSelect('valColFile2', headersFile2, ['giá trị', 'thành tiền', 'đơn giá', 'val', 'amount'], true);
+            }
+        }
+
+        function populateSelect(selectId, headers, keywords, allowNone = false) {
+            const select = document.getElementById(selectId);
+            select.innerHTML = allowNone ? '<option value="">-- Không chọn --</option>' : '';
+            
+            let matchedIndex = -1;
+            headers.forEach((h, idx) => {
+                const option = document.createElement('option');
+                option.value = h;
+                option.text = h;
+                select.appendChild(option);
+
+                // Auto match heuristic
+                const lower = h.toLowerCase();
+                if (matchedIndex === -1 && keywords.some(k => lower.includes(k))) {
+                    matchedIndex = idx;
+                }
+            });
+
+            if (matchedIndex !== -1) {
+                select.selectedIndex = allowNone ? matchedIndex + 1 : matchedIndex;
+            }
+        }
+
+        // Clean String for Key creation
+        function cleanKeyStr(str, ignoreCase = true) {
+            if (str === null || str === undefined) return '';
+            let s = String(str).trim();
+            if (ignoreCase) s = s.toLowerCase();
+            return s.replace(/\s+/g, ' ');
+        }
+
+        // Core Data Processing Function
+        function processData() {
+            const ignoreCase = document.getElementById('ignoreCase').checked;
+            const threshold = parseFloat(document.getElementById('diffThreshold').value) || 0;
+
+            const selectedKeys1 = Array.from(document.querySelectorAll('input[name="key1"]:checked')).map(cb => cb.value);
+            const qtyCol1 = document.getElementById('qtyColFile1').value;
+            const valCol1 = document.getElementById('valColFile1').value;
+
+            if (selectedKeys1.length === 0) {
+                alert('Vui lòng chọn ít nhất 1 cột làm khóa ghép chính cho File 1!');
+                return;
+            }
+
+            processedResults = [];
+
+            if (currentMode === 'aggregate') {
+                // AGGREGATION MODE
+                const map = new Map();
+
+                rawDataFile1.forEach(row => {
+                    const keyParts = selectedKeys1.map(k => cleanKeyStr(row[k], ignoreCase));
+                    const compositeKey = keyParts.join(' | ');
+                    const displayKey = selectedKeys1.map(k => row[k]).join(' | ');
+
+                    const qty = parseFloat(row[qtyCol1]) || 0;
+                    const val = valCol1 ? (parseFloat(row[valCol1]) || 0) : 0;
+
+                    if (!map.has(compositeKey)) {
+                        map.set(compositeKey, {
+                            key: displayKey,
+                            details: row,
+                            totalQty: 0,
+                            totalVal: 0,
+                            count: 0
+                        });
+                    }
+                    const item = map.get(compositeKey);
+                    item.totalQty += qty;
+                    item.totalVal += val;
+                    item.count += 1;
+                });
+
+                map.forEach((item) => {
+                    processedResults.push({
+                        key: item.key,
+                        file1Qty: item.totalQty,
+                        file1Val: item.totalVal,
+                        count: item.count,
+                        status: 'MATCHED',
+                        statusText: 'Đã Tổng Hợp'
+                    });
+                });
+
+            } else {
+                // COMPARISON MODE
+                const selectedKeys2 = Array.from(document.querySelectorAll('input[name="key2"]:checked')).map(cb => cb.value);
+                const qtyCol2 = document.getElementById('qtyColFile2').value;
+                const valCol2 = document.getElementById('valColFile2').value;
+
+                if (selectedKeys1.length !== selectedKeys2.length) {
+                    alert('Số lượng cột khóa ghép ở File 1 và File 2 phải tương ứng đồng nhất!');
+                    return;
+                }
+
+                // Map File 1 Data
+                const map1 = new Map();
+                rawDataFile1.forEach(row => {
+                    const keyParts = selectedKeys1.map(k => cleanKeyStr(row[k], ignoreCase));
+                    const cKey = keyParts.join(' | ');
+                    const displayKey = selectedKeys1.map(k => String(row[k] || '')).join(' | ');
+                    const qty = parseFloat(row[qtyCol1]) || 0;
+                    const val = valCol1 ? (parseFloat(row[valCol1]) || 0) : 0;
+
+                    if (!map1.has(cKey)) {
+                        map1.set(cKey, { displayKey, qty: 0, val: 0, sampleRow: row });
+                    }
+                    const existing = map1.get(cKey);
+                    existing.qty += qty;
+                    existing.val += val;
+                });
+
+                // Map File 2 Data
+                const map2 = new Map();
+                rawDataFile2.forEach(row => {
+                    const keyParts = selectedKeys2.map(k => cleanKeyStr(row[k], ignoreCase));
+                    const cKey = keyParts.join(' | ');
+                    const displayKey = selectedKeys2.map(k => String(row[k] || '')).join(' | ');
+                    const qty = parseFloat(row[qtyCol2]) || 0;
+                    const val = valCol2 ? (parseFloat(row[valCol2]) || 0) : 0;
+
+                    if (!map2.has(cKey)) {
+                        map2.set(cKey, { displayKey, qty: 0, val: 0, sampleRow: row });
+                    }
+                    const existing = map2.get(cKey);
+                    existing.qty += qty;
+                    existing.val += val;
+                });
+
+                // Union Keys
+                const allKeys = new Set([...map1.keys(), ...map2.keys()]);
+
+                allKeys.forEach(cKey => {
+                    const f1 = map1.get(cKey);
+                    const f2 = map2.get(cKey);
+
+                    const displayKey = f1 ? f1.displayKey : f2.displayKey;
+                    const qty1 = f1 ? f1.qty : 0;
+                    const qty2 = f2 ? f2.qty : 0;
+                    const val1 = f1 ? f1.val : 0;
+                    const val2 = f2 ? f2.val : 0;
+
+                    const diffQty = qty2 - qty1;
+                    const diffVal = val2 - val1;
+                    const absDiffQty = Math.abs(diffQty);
+
+                    let status = 'MATCHED';
+                    let statusText = 'Khớp hoàn toàn';
+
+                    if (!f1) {
+                        status = 'ONLY_2';
+                        statusText = 'Chỉ có ở File 2';
+                    } else if (!f2) {
+                        status = 'ONLY_1';
+                        statusText = 'Chỉ có ở File 1';
+                    } else if (absDiffQty > threshold) {
+                        status = 'DIFF';
+                        statusText = `Lệch (${diffQty > 0 ? '+' : ''}${diffQty})`;
+                    }
+
+                    processedResults.push({
+                        key: displayKey,
+                        qty1,
+                        qty2,
+                        diffQty,
+                        val1,
+                        val2,
+                        diffVal,
+                        status,
+                        statusText
+                    });
+                });
+            }
+
+            renderDashboard();
+        }
+
+        // Render Dashboard Stats and Table
+        function renderDashboard() {
+            document.getElementById('summarySection').classList.remove('hidden');
+
+            // Calculate Metrics
+            const total = processedResults.length;
+            const matched = processedResults.filter(r => r.status === 'MATCHED').length;
+            const diff = processedResults.filter(r => r.status === 'DIFF').length;
+            const missing = processedResults.filter(r => r.status === 'ONLY_1' || r.status === 'ONLY_2').length;
+            
+            const totalAbsDiffQty = processedResults.reduce((acc, r) => acc + Math.abs(r.diffQty || 0), 0);
+
+            document.getElementById('statTotal').innerText = total.toLocaleString('vi-VN');
+            document.getElementById('statMatched').innerText = matched.toLocaleString('vi-VN');
+            document.getElementById('statDiff').innerText = diff.toLocaleString('vi-VN');
+            document.getElementById('statMissing').innerText = missing.toLocaleString('vi-VN');
+            document.getElementById('statTotalDiffQty').innerText = totalAbsDiffQty.toLocaleString('vi-VN');
+
+            filterResults();
+        }
+
+        // Filter and Search Logic
+        function filterResults() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const statusFilter = document.getElementById('statusFilter').value;
+
+            filteredResults = processedResults.filter(r => {
+                const matchesQuery = r.key.toLowerCase().includes(query);
+                const matchesStatus = statusFilter === 'ALL' || r.status === statusFilter;
+                return matchesQuery && matchesStatus;
+            });
+
+            currentPage = 1;
+            renderTable();
+        }
+
+        // Render Output Dynamic Table
+        function renderTable() {
+            const headerRow = document.getElementById('tableHeader');
+            const tableBody = document.getElementById('tableBody');
+
+            if (currentMode === 'aggregate') {
+                headerRow.innerHTML = `
+                    <th class="p-3">Khóa Ghép</th>
+                    <th class="p-3 text-right">Tổng Số Lượng</th>
+                    <th class="p-3 text-right">Tổng Giá Trị</th>
+                    <th class="p-3 text-center">Số Dòng Gộp</th>
+                    <th class="p-3 text-center">Trạng Thái</th>
+                `;
+            } else {
+                headerRow.innerHTML = `
+                    <th class="p-3">Khóa Ghép / Mã Mã SAP</th>
+                    <th class="p-3 text-right">SL File 1</th>
+                    <th class="p-3 text-right">SL File 2</th>
+                    <th class="p-3 text-right">Chênh Lệch SL</th>
+                    <th class="p-3 text-right">GT File 1</th>
+                    <th class="p-3 text-right">GT File 2</th>
+                    <th class="p-3 text-center">Trạng Thái</th>
+                `;
+            }
+
+            tableBody.innerHTML = '';
+
+            const startIdx = (currentPage - 1) * pageSize;
+            const endIdx = startIdx + pageSize;
+            const pageData = filteredResults.slice(startIdx, endIdx);
+
+            if (pageData.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-6 text-slate-400">Không tìm thấy dữ liệu phù hợp.</td>
+                    </tr>
+                `;
+            } else {
+                pageData.forEach(r => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 transition';
+
+                    let badgeClass = 'bg-slate-100 text-slate-600';
+                    if (r.status === 'MATCHED') badgeClass = 'bg-emerald-100 text-emerald-800';
+                    if (r.status === 'DIFF') badgeClass = 'bg-amber-100 text-amber-800 font-semibold';
+                    if (r.status === 'ONLY_1' || r.status === 'ONLY_2') badgeClass = 'bg-rose-100 text-rose-800';
+
+                    if (currentMode === 'aggregate') {
+                        tr.innerHTML = `
+                            <td class="p-3 font-medium text-slate-800">${r.key}</td>
+                            <td class="p-3 text-right font-semibold text-slate-800">${r.file1Qty.toLocaleString('vi-VN')}</td>
+                            <td class="p-3 text-right text-slate-600">${r.file1Val ? r.file1Val.toLocaleString('vi-VN') : '-'}</td>
+                            <td class="p-3 text-center text-slate-500">${r.count}</td>
+                            <td class="p-3 text-center"><span class="px-2 py-0.5 text-[10px] rounded-full ${badgeClass}">${r.statusText}</span></td>
+                        `;
+                    } else {
+                        const diffClass = r.diffQty > 0 ? 'text-emerald-600 font-semibold' : (r.diffQty < 0 ? 'text-rose-600 font-semibold' : 'text-slate-400');
+                        tr.innerHTML = `
+                            <td class="p-3 font-medium text-slate-800">${r.key}</td>
+                            <td class="p-3 text-right">${r.qty1.toLocaleString('vi-VN')}</td>
+                            <td class="p-3 text-right">${r.qty2.toLocaleString('vi-VN')}</td>
+                            <td class="p-3 text-right ${diffClass}">${r.diffQty > 0 ? '+' : ''}${r.diffQty.toLocaleString('vi-VN')}</td>
+                            <td class="p-3 text-right text-slate-500">${r.val1 ? r.val1.toLocaleString('vi-VN') : '-'}</td>
+                            <td class="p-3 text-right text-slate-500">${r.val2 ? r.val2.toLocaleString('vi-VN') : '-'}</td>
+                            <td class="p-3 text-center"><span class="px-2 py-0.5 text-[10px] rounded-full ${badgeClass}">${r.statusText}</span></td>
+                        `;
+                    }
+                    tableBody.appendChild(tr);
+                });
+            }
+
+            renderPagination();
+        }
+
+        // Render Pagination Controls
+        function renderPagination() {
+            const totalItems = filteredResults.length;
+            const totalPages = Math.ceil(totalItems / pageSize) || 1;
+            const startIdx = totalItems > 0 ? (currentPage - 1) * pageSize + 1 : 0;
+            const endIdx = Math.min(currentPage * pageSize, totalItems);
+
+            document.getElementById('paginationInfo').innerText = `Hiển thị ${startIdx} - ${endIdx} / ${totalItems} dòng`;
+
+            const container = document.getElementById('paginationBtns');
+            container.innerHTML = `
+                <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="px-2.5 py-1 text-xs border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40">Trước</button>
+                <span class="text-xs py-1 px-2 text-slate-600 font-medium">${currentPage} / ${totalPages}</span>
+                <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="px-2.5 py-1 text-xs border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40">Sau</button>
+            `;
+        }
+
+        function changePage(page) {
+            const totalPages = Math.ceil(filteredResults.length / pageSize) || 1;
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                renderTable();
+            }
+        }
+
+        // Export Multiple Sheets to XLSX
+        function exportToExcel() {
+            if (processedResults.length === 0) {
+                alert('Không có dữ liệu để xuất!');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+
+            if (currentMode === 'aggregate') {
+                const sheetData = processedResults.map(r => ({
+                    'Khóa Ghép / Mã': r.key,
+                    'Tổng Số Lượng': r.file1Qty,
+                    'Tổng Giá Trị': r.file1Val,
+                    'Số Dòng Gom': r.count
+                }));
+                const ws = XLSX.utils.json_to_sheet(sheetData);
+                XLSX.utils.book_append_sheet(wb, ws, 'Tong_Hop_Ton_Kho');
+            } else {
+                // Sheet 1: Tất Cả Chi Tiết
+                const allData = processedResults.map(r => ({
+                    'Khóa Ghép': r.key,
+                    'SL File 1 (SAP)': r.qty1,
+                    'SL File 2 (Kế Toán/Kho)': r.qty2,
+                    'Chênh Lệch SL': r.diffQty,
+                    'Giá Trị File 1': r.val1,
+                    'Giá Trị File 2': r.val2,
+                    'Chênh Lệch Giá Trị': r.diffVal,
+                    'Trạng Thái': r.statusText
+                }));
+                const wsAll = XLSX.utils.json_to_sheet(allData);
+                XLSX.utils.book_append_sheet(wb, wsAll, 'Chi_Tiet_Doi_Chieu');
+
+                // Sheet 2: Danh Sách Chênh Lệch
+                const diffData = processedResults.filter(r => r.status === 'DIFF' || r.status === 'ONLY_1' || r.status === 'ONLY_2').map(r => ({
+                    'Khóa Ghép': r.key,
+                    'SL File 1 (SAP)': r.qty1,
+                    'SL File 2 (Kho)': r.qty2,
+                    'Chênh Lệch SL': r.diffQty,
+                    'Trạng Thái': r.statusText
+                }));
+                const wsDiff = XLSX.utils.json_to_sheet(diffData);
+                XLSX.utils.book_append_sheet(wb, wsDiff, 'Danh_Sach_Chenh_Lech');
+            }
+
+            XLSX.writeFile(wb, `Bao_Cao_Ton_Kho_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        // Download Mock Sample Excel Data
+        function downloadSampleData() {
+            const sampleSAP = [
+                ['Mã SAP', 'Tên Vật Tư', 'Kho', 'Số Lượng Tồn', 'Đơn Giá'],
+                ['MAT-001', 'Thép Cuộn Phi 6', 'KHO-A', 1500, 15000],
+                ['MAT-002', 'Ống Nhựa PVC 90', 'KHO-A', 800, 45000],
+                ['MAT-003', 'Sơn Lót Chống Tẩy', 'KHO-B', 300, 120000],
+                ['MAT-004', 'Đinh Vít 5cm', 'KHO-A', 5000, 200],
+                ['MAT-005', 'Xi Măng Hà Tiên', 'KHO-B', 200, 90000]
+            ];
+
+            const sampleKièmKe = [
+                ['Material_Code', 'Kho_Thuc_Te', 'SL_Kiem_Ke'],
+                ['MAT-001', 'KHO-A', 1500], // Matched
+                ['MAT-002', 'KHO-A', 750],  // Diff (-50)
+                ['MAT-003', 'KHO-B', 300],  // Matched
+                ['MAT-004', 'KHO-A', 5200], // Diff (+200)
+                ['MAT-006', 'KHO-A', 100]   // Missing in SAP
+            ];
+
+            const wb = XLSX.utils.book_new();
+            const ws1 = XLSX.utils.aoa_to_sheet(sampleSAP);
+            const ws2 = XLSX.utils.aoa_to_sheet(sampleKièmKe);
+
+            XLSX.utils.book_append_sheet(wb, ws1, 'File_1_SAP');
+            XLSX.utils.book_append_sheet(wb, ws2, 'File_2_KiemKe');
+
+            XLSX.writeFile(wb, 'File_Mau_Doi_Chieu_Ton_Kho.xlsx');
+        }
+    </script>
+</body>
+</html>
